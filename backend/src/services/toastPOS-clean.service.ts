@@ -1,7 +1,5 @@
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config();
+// Environment variables are loaded in main index.ts
 
 interface ToastConfig {
   clientId: string;

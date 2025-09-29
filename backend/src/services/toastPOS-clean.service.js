@@ -1,7 +1,5 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config();
+// Environment variables are loaded in main index.js
 
 /**
  * Toast POS API Service

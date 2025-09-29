@@ -7,19 +7,34 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Environment variables
+# Environment variables - NEVER COMMIT
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env.staging
+.env.staging.local
 
-# Environment files in subdirectories
+# Environment files in ALL subdirectories
 **/.env
 **/.env.local
+**/.env.development
 **/.env.development.local
+**/.env.test
 **/.env.test.local
+**/.env.production
 **/.env.production.local
+**/.env.staging
+**/.env.staging.local
+
+# Frontend environment files
+frontend/.env*
+backend/.env*
+database/.env*
 
 # Database
 *.db

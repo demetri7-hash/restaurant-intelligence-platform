@@ -1,17 +1,32 @@
-# Environment files should not be included in Docker builds
+# Environment files should NEVER be included in Docker builds
 # Environment variables should be set via the deployment platform
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env.staging
+.env.staging.local
 
-# Environment files in subdirectories
+# Environment files in ALL subdirectories
 **/.env
 **/.env.local
+**/.env.development
 **/.env.development.local
+**/.env.test
 **/.env.test.local
+**/.env.production
 **/.env.production.local
+**/.env.staging
+**/.env.staging.local
+
+# Specific subdirectory env files
+frontend/.env*
+backend/.env*
+database/.env*
 
 # Git
 .git
