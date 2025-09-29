@@ -5,9 +5,15 @@ import compression from 'compression'
 import morgan from 'morgan'
 import rateLimit from 'express-rate-limit'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { PrismaClient } from '@prisma/client'
 // Import Toast service for live API testing
 import { ToastPOSService } from './services/toastPOS-clean.service.js'
+
+// ES Module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Load environment variables only in development
 // In production, Koyeb provides system environment variables
@@ -317,6 +323,29 @@ app.get('/api/analytics/dashboard/:restaurantId', async (req, res) => {
     })
   }
 })
+
+// Serve static files from the frontend build (only in production)
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the frontend build directory
+  const frontendBuildPath = path.join(__dirname, '../../frontend/out')
+  app.use(express.static(frontendBuildPath))
+  
+  // Handle client-side routing - serve index.html for non-API routes
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+      return next()
+    }
+    
+    // Serve index.html for all other routes (SPA routing)
+    res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err)
+        return next()
+      }
+    })
+  })
+}
 
 // 404 handler
 app.use((req, res) => {
