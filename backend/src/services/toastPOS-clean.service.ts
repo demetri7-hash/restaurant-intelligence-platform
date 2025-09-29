@@ -71,9 +71,20 @@ export class ToastPOSService {
     const required: (keyof ToastConfig)[] = ['clientId', 'clientSecret', 'restaurantGuid'];
     const missing = required.filter(key => !this.config[key]);
     
+    console.log('🔧 Toast API Configuration:');
+    console.log(`  Client ID: ${this.config.clientId ? this.config.clientId.substring(0, 8) + '...' : 'NOT SET'}`);
+    console.log(`  Client Secret: ${this.config.clientSecret ? this.config.clientSecret.substring(0, 8) + '...' : 'NOT SET'}`);
+    console.log(`  Restaurant GUID: ${this.config.restaurantGuid ? this.config.restaurantGuid.substring(0, 8) + '...' : 'NOT SET'}`);
+    console.log(`  Base URL: ${this.config.baseUrl}`);
+    console.log(`  Auth URL: ${this.config.authUrl}`);
+    
     if (missing.length > 0) {
-      throw new Error(`Missing required Toast API configuration: ${missing.join(', ')}`);
+      const errorMsg = `Missing required Toast API configuration: ${missing.join(', ')}`;
+      console.error('❌', errorMsg);
+      throw new Error(errorMsg);
     }
+    
+    console.log('✅ Toast API configuration validated successfully');
   }
 
   private isTokenValid(): boolean {
@@ -252,27 +263,48 @@ export class ToastPOSService {
 
   async testConnection(): Promise<ToastConnectionTestResult> {
     try {
+      console.log('\n🧪 === TOAST POS CONNECTION TEST ===');
       console.log('Testing Toast POS connection...');
       
+      // Check configuration first
+      try {
+        this.validateConfig();
+      } catch (configError) {
+        return {
+          success: false,
+          message: 'Configuration validation failed',
+          details: configError instanceof Error ? configError.message : 'Invalid configuration'
+        };
+      }
+      
       // First authenticate
+      console.log('\n🔐 Step 1: Authentication...');
       const authResult = await this.authenticate();
       if (!authResult.success) {
+        console.error('❌ Authentication failed:', authResult.error);
         return {
           success: false,
           message: 'Authentication failed',
           details: authResult.error
         };
       }
+      
+      console.log('✅ Authentication successful');
 
       // Try to get restaurant info
+      console.log('\n🏪 Step 2: Testing restaurant data access...');
       const restaurantResult = await this.getRestaurant();
       if (!restaurantResult.success) {
+        console.error('❌ Restaurant data access failed:', restaurantResult.error);
         return {
           success: false,
           message: 'Failed to retrieve restaurant information',
           details: restaurantResult.error
         };
       }
+
+      console.log('✅ Restaurant data access successful');
+      console.log('\n🎉 === TOAST POS CONNECTION TEST PASSED ===\n');
 
       return {
         success: true,
@@ -284,12 +316,26 @@ export class ToastPOSService {
         }
       };
     } catch (error: any) {
+      console.error('❌ Toast API test connection failed:', error);
       return {
         success: false,
         message: 'Connection test failed',
         details: error.message
       };
     }
+  }
+
+  // Get configuration info for debugging (with sensitive data masked)
+  getConfig() {
+    return {
+      clientId: this.config.clientId ? `${this.config.clientId.substring(0, 8)}...` : 'NOT SET',
+      clientSecret: this.config.clientSecret ? `${this.config.clientSecret.substring(0, 8)}...` : 'NOT SET',
+      restaurantGuid: this.config.restaurantGuid ? `${this.config.restaurantGuid.substring(0, 8)}...` : 'NOT SET',
+      baseUrl: this.config.baseUrl,
+      authUrl: this.config.authUrl,
+      hasAccessToken: !!this.accessToken,
+      tokenExpiry: this.tokenExpiry ? new Date(this.tokenExpiry).toISOString() : null
+    };
   }
 }
 
