@@ -6,8 +6,7 @@ import {
   ArrowTrendingUpIcon, 
   ArrowTrendingDownIcon,
   CalendarIcon,
-  ClockIcon,
-  CurrencyDollarIcon
+  ClockIcon
 } from '@heroicons/react/24/outline'
 
 export function PerformanceMetrics() {

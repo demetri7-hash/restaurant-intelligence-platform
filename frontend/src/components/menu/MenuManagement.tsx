@@ -5,7 +5,6 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  PhotoIcon,
   CheckCircleIcon,
   XCircleIcon,
   FireIcon,
@@ -46,7 +45,7 @@ interface MenuItem {
 export function MenuManagement() {
   const [selectedCategory, setSelectedCategory] = React.useState('All')
   const [searchTerm, setSearchTerm] = React.useState('')
-  const [showAddModal, setShowAddModal] = React.useState(false)
+  // const [showAddModal, setShowAddModal] = React.useState(false) // TODO: Implement add modal
 
   const categories = ['All', 'Entrees', 'Appetizers', 'Salads', 'Desserts', 'Beverages', 'Specials']
   
@@ -235,7 +234,7 @@ export function MenuManagement() {
           <p className="text-gray-600 mt-1">Manage your restaurant menu items and pricing</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
+          // onClick={() => setShowAddModal(true)} // TODO: Implement add modal
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
         >
           <PlusIcon className="h-5 w-5" />
@@ -409,7 +408,7 @@ export function MenuManagement() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Today's Sales</p>
+                  <p className="text-sm text-gray-500">Today&apos;s Sales</p>
                   <p className="text-lg font-semibold text-gray-900">{item.sales.today}</p>
                 </div>
                 <div>

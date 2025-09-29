@@ -5,7 +5,6 @@ import {
   ChartBarIcon,
   CalendarIcon,
   ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
   CurrencyDollarIcon,
   ShoppingBagIcon,
   UserGroupIcon,

@@ -9,10 +9,10 @@ import {
   CubeIcon,
   ShoppingBagIcon,
   UsersIcon,
-  DocumentReportIcon,
+  DocumentTextIcon,
   CogIcon,
-  MenuIcon,
-  XIcon
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 
 const navigationItems = [
@@ -22,7 +22,7 @@ const navigationItems = [
   { name: 'Orders', href: '/orders', icon: ShoppingBagIcon },
   { name: 'Customers', href: '/customers', icon: UsersIcon },
   { name: 'Inventory', href: '/inventory', icon: CubeIcon },
-  { name: 'Reports', href: '/reports', icon: DocumentReportIcon },
+  { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ]
 
@@ -41,9 +41,9 @@ export function Sidebar() {
           className="bg-white p-2 rounded-md shadow-md"
         >
           {isOpen ? (
-            <XIcon className="h-6 w-6" />
+            <XMarkIcon className="h-6 w-6" />
           ) : (
-            <MenuIcon className="h-6 w-6" />
+            <Bars3Icon className="h-6 w-6" />
           )}
         </button>
       </div>

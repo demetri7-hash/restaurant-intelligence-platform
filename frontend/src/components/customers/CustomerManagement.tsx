@@ -10,7 +10,6 @@ import {
   StarIcon,
   ShoppingBagIcon,
   CurrencyDollarIcon,
-  CalendarIcon,
   EyeIcon,
   PencilIcon,
   HeartIcon,
@@ -39,7 +38,7 @@ interface Customer {
 export function CustomerManagement() {
   const [searchTerm, setSearchTerm] = React.useState('')
   const [selectedStatus, setSelectedStatus] = React.useState('all')
-  const [showAddModal, setShowAddModal] = React.useState(false)
+  // const [showAddModal, setShowAddModal] = React.useState(false) // TODO: Implement add modal
 
   const statusFilters = [
     { key: 'all', label: 'All Customers', count: 1856 },
@@ -179,7 +178,7 @@ export function CustomerManagement() {
           <p className="text-gray-600 mt-1">Manage your customer relationships and preferences</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
+          // onClick={() => setShowAddModal(true)} // TODO: Implement add modal
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
         >
           <UserPlusIcon className="h-5 w-5" />

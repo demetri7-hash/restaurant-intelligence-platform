@@ -159,7 +159,7 @@ export function MenuAnalytics() {
             <h2 className="text-lg font-semibold text-gray-900">Top Performing Items</h2>
             <div className="flex items-center space-x-2">
               <FireIcon className="h-5 w-5 text-orange-500" />
-              <span className="text-sm text-gray-500">Today's bestsellers</span>
+              <span className="text-sm text-gray-500">Today&apos;s bestsellers</span>
             </div>
           </div>
         </div>

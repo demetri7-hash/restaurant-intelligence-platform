@@ -49,8 +49,8 @@ interface Order {
 export function OrderManagement() {
   const [selectedStatus, setSelectedStatus] = React.useState('all')
   const [selectedOrderType, setSelectedOrderType] = React.useState('all')
-  const [showOrderModal, setShowOrderModal] = React.useState(false)
-  const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null)
+  // const [showOrderModal, setShowOrderModal] = React.useState(false) // TODO: Implement order modal
+  // const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null) // TODO: Implement order details
 
   const statusFilters = [
     { key: 'all', label: 'All Orders', count: 47 },
@@ -419,7 +419,7 @@ export function OrderManagement() {
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setSelectedOrder(order)}
+                    // onClick={() => setSelectedOrder(order)} // TODO: Implement order details
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1"
                   >
                     <EyeIcon className="h-4 w-4" />
