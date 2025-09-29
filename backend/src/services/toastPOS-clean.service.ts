@@ -256,16 +256,28 @@ export class ToastPOSService {
     const params = new URLSearchParams();
     
     if (startDate && endDate) {
-      // URLSearchParams automatically handles encoding
-      params.append('startDate', startDate);
-      params.append('endDate', endDate);
-      console.log(`📦 Using date range: ${startDate} to ${endDate}`);
+      // Check if it's the same day - if so, use businessDate instead to avoid 1-hour limit
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const sameDay = start.toDateString() === end.toDateString();
+      
+      if (sameDay) {
+        // Use businessDate for same-day queries (avoids 1-hour limit)
+        const businessDate = start.toISOString().split('T')[0]; // YYYY-MM-DD
+        params.append('businessDate', businessDate);
+        console.log(`📦 Using businessDate (same day): ${businessDate}`);
+      } else {
+        // Use date range for multi-day queries
+        params.append('startDate', startDate);
+        params.append('endDate', endDate);
+        console.log(`📦 Using date range: ${startDate} to ${endDate}`);
+      }
     } else {
-      // Use businessDate for single day if no range provided
+      // Default to today's business date
       const today = new Date();
-      const businessDate = today.toISOString();
+      const businessDate = today.toISOString().split('T')[0];
       params.append('businessDate', businessDate);
-      console.log(`📦 Using businessDate: ${businessDate}`);
+      console.log(`📦 Using default businessDate: ${businessDate}`);
     }
     
     const endpoint = `/orders/v2/orders?${params.toString()}`;

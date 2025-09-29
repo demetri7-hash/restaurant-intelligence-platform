@@ -449,38 +449,38 @@ function getPacificDateOnly(date: Date): string {
 function getDateRange(preset?: string, customStartDate?: string, customEndDate?: string): { startDate: string, endDate: string } {
   const now = new Date();
   
-  // Use custom dates if provided
+  // Use custom dates if provided (simple YYYY-MM-DD format for businessDate)
   if (customStartDate && customEndDate) {
-    const startDateObj = new Date(`${customStartDate}T00:00:00`);
-    const endDateObj = new Date(`${customEndDate}T23:59:59`);
     return { 
-      startDate: getToastDate(startDateObj, true), 
-      endDate: getToastDate(endDateObj, false) 
+      startDate: customStartDate, 
+      endDate: customEndDate 
     };
   }
   
-  // Handle preset options
+  // Handle preset options using simple date format for businessDate
   switch (preset) {
     case 'today':
+      const today = getPacificDateOnly(now);
       return { 
-        startDate: getToastDate(now, true), 
-        endDate: getToastDate(now, false) 
+        startDate: today, 
+        endDate: today 
       };
       
     case 'yesterday':
       const yesterday = new Date(now);
       yesterday.setDate(now.getDate() - 1);
+      const yesterdayStr = getPacificDateOnly(yesterday);
       return { 
-        startDate: getToastDate(yesterday, true), 
-        endDate: getToastDate(yesterday, false) 
+        startDate: yesterdayStr, 
+        endDate: yesterdayStr 
       };
       
     case 'last7days':
       const sevenDaysAgo = new Date(now);
       sevenDaysAgo.setDate(now.getDate() - 7);
       return { 
-        startDate: getToastDate(sevenDaysAgo, true), 
-        endDate: getToastDate(now, false) 
+        startDate: getPacificDateOnly(sevenDaysAgo), 
+        endDate: getPacificDateOnly(now) 
       };
       
     case 'lastweek':
@@ -493,17 +493,16 @@ function getDateRange(preset?: string, customStartDate?: string, customEndDate?:
       lastMonday.setDate(lastSunday.getDate() + 1); 
       
       return {
-        startDate: getToastDate(lastMonday, true),
-        endDate: getToastDate(lastSunday, false)
+        startDate: getPacificDateOnly(lastMonday),
+        endDate: getPacificDateOnly(lastSunday)
       };
       
     default:
-      // Default to last 7 days
-      const defaultStart = new Date(now);
-      defaultStart.setDate(now.getDate() - 7);
+      // Default to today
+      const defaultDate = getPacificDateOnly(now);
       return { 
-        startDate: getToastDate(defaultStart, true), 
-        endDate: getToastDate(now, false) 
+        startDate: defaultDate, 
+        endDate: defaultDate 
       };
   }
 }
