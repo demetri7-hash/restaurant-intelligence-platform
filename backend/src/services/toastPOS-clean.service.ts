@@ -248,7 +248,8 @@ export class ToastPOSService {
 
   async getMenus(): Promise<ToastApiResult> {
     console.log('Getting menu information...');
-    return await this.makeAuthenticatedRequest('/menus/v1/menus');
+    // Use menus v2 API (Toast-Restaurant-External-ID header is added automatically by makeAuthenticatedRequest)
+    return await this.makeAuthenticatedRequest('/menus/v2/menus');
   }
 
   async getOrders(startDate?: string, endDate?: string): Promise<ToastApiResult> {
