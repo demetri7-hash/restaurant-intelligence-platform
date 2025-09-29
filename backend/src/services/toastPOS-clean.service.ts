@@ -256,25 +256,20 @@ export class ToastPOSService {
     const params = new URLSearchParams();
     
     if (startDate && endDate) {
-      // URL encode the dates properly for Toast API (+ becomes %2B)
-      const encodedStartDate = encodeURIComponent(startDate);
-      const encodedEndDate = encodeURIComponent(endDate);
-      
-      params.append('startDate', encodedStartDate);
-      params.append('endDate', encodedEndDate);
-      console.log(`📦 Using encoded date range: ${encodedStartDate} to ${encodedEndDate}`);
+      // URLSearchParams automatically handles encoding
+      params.append('startDate', startDate);
+      params.append('endDate', endDate);
+      console.log(`📦 Using date range: ${startDate} to ${endDate}`);
     } else {
-      // Use businessDate for single day (today) with proper encoding
+      // Use businessDate for single day if no range provided
       const today = new Date();
       const businessDate = today.toISOString();
-      const encodedBusinessDate = encodeURIComponent(businessDate);
-      
-      params.append('businessDate', encodedBusinessDate);
-      console.log(`📦 Using encoded businessDate: ${encodedBusinessDate}`);
+      params.append('businessDate', businessDate);
+      console.log(`📦 Using businessDate: ${businessDate}`);
     }
     
-    const endpoint = `/orders/v2/orders${params.toString() ? '?' + params.toString() : ''}`;
-    console.log(`📦 Orders endpoint: ${this.config.baseUrl}${endpoint}`);
+    const endpoint = `/orders/v2/orders?${params.toString()}`;
+    console.log(`📦 Full orders URL: ${this.config.baseUrl}${endpoint}`);
     return await this.makeAuthenticatedRequest(endpoint);
   }
 
