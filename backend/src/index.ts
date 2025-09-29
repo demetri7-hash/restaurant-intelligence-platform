@@ -11,6 +11,8 @@ import { fileURLToPath } from 'url'
 import { PrismaClient } from '@prisma/client'
 // Import Toast service for live API testing
 import { ToastPOSService } from './services/toastPOS-clean.service.js'
+// Import Toast routes
+import toastRoutes from './routes/toast.routes.js'
 
 // ES Module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url)
@@ -102,6 +104,9 @@ app.use(cors({
 }))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+// Mount Toast POS API routes with proper authentication
+app.use('/api/toast', toastRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {
