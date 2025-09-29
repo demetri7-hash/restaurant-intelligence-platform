@@ -288,7 +288,7 @@ app.get('/api/analytics/dashboard/:restaurantId', async (req, res) => {
       })
     ])
 
-    const todayRevenue = todayTransactions.reduce((sum, t) => sum + Number(t.totalAmount), 0)
+    const todayRevenue = todayTransactions.reduce((sum: number, t: any) => sum + Number(t.totalAmount), 0)
     const averageTicket = todayTransactions.length > 0 ? todayRevenue / todayTransactions.length : 0
 
     res.json({
@@ -298,7 +298,7 @@ app.get('/api/analytics/dashboard/:restaurantId', async (req, res) => {
         totalTransactions: todayTransactions.length,
         averageTicket,
         totalCustomers,
-        topMenuItems: topMenuItems.map(item => ({
+        topMenuItems: topMenuItems.map((item: any) => ({
           name: item.itemName,
           quantity: item._sum.quantity || 0,
           revenue: Number(item._sum.totalPrice || 0)
