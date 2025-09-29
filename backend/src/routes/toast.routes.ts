@@ -13,6 +13,73 @@ const toastPOS = new ToastPOSService()
  * Provides endpoints for Toast POS integration, data sync, and analytics
  */
 
+// Get available date presets and current Pacific time info
+router.get('/date-options', (req, res) => {
+  try {
+    const now = new Date()
+    const pacificTime = now.toLocaleString('en-US', { 
+      timeZone: 'America/Los_Angeles',
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    })
+    
+    const presets = {
+      today: getDateRange('today'),
+      yesterday: getDateRange('yesterday'), 
+      last7days: getDateRange('last7days'),
+      lastweek: getDateRange('lastweek')
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        currentPacificTime: pacificTime,
+        timezone: 'America/Los_Angeles',
+        availablePresets: {
+          today: { 
+            label: 'Today', 
+            description: 'Current business day',
+            ...presets.today 
+          },
+          yesterday: { 
+            label: 'Yesterday', 
+            description: 'Previous business day',
+            ...presets.yesterday 
+          },
+          last7days: { 
+            label: 'Last 7 Days', 
+            description: 'Past week including today',
+            ...presets.last7days 
+          },
+          lastweek: { 
+            label: 'Last Week', 
+            description: 'Monday through Sunday of previous week',
+            ...presets.lastweek 
+          }
+        },
+        customDateInfo: {
+          format: 'YYYY-MM-DD',
+          parameters: 'startDate and endDate',
+          example: '?startDate=2025-09-01&endDate=2025-09-28'
+        }
+      },
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get date options',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
 // Debug configuration endpoint (for troubleshooting production issues)
 router.get('/debug-config', (req, res) => {
   try {
@@ -142,20 +209,19 @@ router.get('/menu-items', async (req, res) => {
 // Get orders from Toast
 router.get('/orders', async (req, res) => {
   try {
-    let startDate = req.query.startDate as string
-    let endDate = req.query.endDate as string
-    const pageSize = parseInt(req.query.pageSize as string) || 100
+    console.log('📦 Orders endpoint called with params:', req.query)
+    const { preset, startDate: customStartDate, endDate: customEndDate, pageSize } = req.query
     
-    // Provide default date range if not specified (last 7 days)
-    if (!startDate || !endDate) {
-      const today = new Date()
-      const sevenDaysAgo = new Date(today)
-      sevenDaysAgo.setDate(today.getDate() - 7)
-      
-      startDate = sevenDaysAgo.toISOString().split('T')[0]
-      endDate = today.toISOString().split('T')[0]
-      
-      console.log(`📦 Using default date range for orders: ${startDate} to ${endDate}`)
+    // Get date range based on preset or custom dates
+    const { startDate, endDate } = getDateRange(
+      preset as string, 
+      customStartDate as string, 
+      customEndDate as string
+    )
+    
+    console.log(`📦 Using date range (Pacific timezone): ${startDate} to ${endDate}`)
+    if (preset) {
+      console.log(`📦 Preset used: ${preset}`)
     }
 
     const result = await toastPOS.getOrders(startDate, endDate)
@@ -313,26 +379,86 @@ router.post('/sync', async (req, res) => {
 })
 
 // Analytics endpoint - Toast data analytics
+// Helper function to get dates in Pacific timezone
+function getPacificDate(date: Date): string {
+  return date.toLocaleDateString('en-CA', { 
+    timeZone: 'America/Los_Angeles'
+  }) // Returns YYYY-MM-DD format
+}
+
+function getDateRange(preset?: string, customStartDate?: string, customEndDate?: string): { startDate: string, endDate: string } {
+  const now = new Date()
+  
+  // Use custom dates if provided
+  if (customStartDate && customEndDate) {
+    return { startDate: customStartDate, endDate: customEndDate }
+  }
+  
+  // Handle preset options
+  switch (preset) {
+    case 'today':
+      const today = getPacificDate(now)
+      return { startDate: today, endDate: today }
+      
+    case 'yesterday':
+      const yesterday = new Date(now)
+      yesterday.setDate(now.getDate() - 1)
+      const yesterdayStr = getPacificDate(yesterday)
+      return { startDate: yesterdayStr, endDate: yesterdayStr }
+      
+    case 'last7days':
+      const sevenDaysAgo = new Date(now)
+      sevenDaysAgo.setDate(now.getDate() - 7)
+      return { 
+        startDate: getPacificDate(sevenDaysAgo), 
+        endDate: getPacificDate(now) 
+      }
+      
+    case 'lastweek':
+      // Get last Monday through Sunday in Pacific timezone
+      const lastSunday = new Date(now)
+      const daysFromSunday = now.getDay() // 0 = Sunday, 1 = Monday, etc.
+      lastSunday.setDate(now.getDate() - daysFromSunday - 7) // Go to last Sunday
+      
+      const lastMonday = new Date(lastSunday)
+      lastMonday.setDate(lastSunday.getDate() + 1) // Monday after last Sunday
+      
+      return {
+        startDate: getPacificDate(lastMonday),
+        endDate: getPacificDate(lastSunday)
+      }
+      
+    default:
+      // Default to last 7 days
+      const defaultStart = new Date(now)
+      defaultStart.setDate(now.getDate() - 7)
+      return { 
+        startDate: getPacificDate(defaultStart), 
+        endDate: getPacificDate(now) 
+      }
+  }
+}
+
 router.get('/analytics', async (req, res) => {
   try {
     console.log('📊 Analytics endpoint called with params:', req.query)
-    let { startDate, endDate } = req.query
+    const { preset, startDate: customStartDate, endDate: customEndDate } = req.query
     
-    // Provide default date range if not specified (last 30 days)
-    if (!startDate || !endDate) {
-      const today = new Date()
-      const thirtyDaysAgo = new Date(today)
-      thirtyDaysAgo.setDate(today.getDate() - 30)
-      
-      startDate = thirtyDaysAgo.toISOString().split('T')[0] as string
-      endDate = today.toISOString().split('T')[0] as string
-      
-      console.log(`📊 Using default date range: ${startDate} to ${endDate}`)
+    // Get date range based on preset or custom dates
+    const { startDate, endDate } = getDateRange(
+      preset as string, 
+      customStartDate as string, 
+      customEndDate as string
+    )
+    
+    console.log(`📊 Using date range (Pacific timezone): ${startDate} to ${endDate}`)
+    if (preset) {
+      console.log(`📊 Preset used: ${preset}`)
     }
     
-    // Get recent Toast orders for analytics
+    // Get recent Toast orders for analytics with proper date format
     console.log('📊 Fetching Toast orders for analytics...')
-    const ordersResult = await toastPOS.getOrders(startDate as string, endDate as string)
+    const ordersResult = await toastPOS.getOrders(startDate, endDate)
 
     if (!ordersResult.success) {
       console.error('❌ Failed to fetch orders for analytics:', ordersResult.error)

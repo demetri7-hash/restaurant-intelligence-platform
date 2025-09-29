@@ -254,10 +254,21 @@ export class ToastPOSService {
   async getOrders(startDate?: string, endDate?: string): Promise<ToastApiResult> {
     console.log('Getting orders...');
     const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
+    
+    if (startDate && endDate) {
+      // Use date range if both provided
+      params.append('startDate', startDate);
+      params.append('endDate', endDate);
+      console.log(`📦 Using date range: ${startDate} to ${endDate}`);
+    } else {
+      // Use businessDate for single day (today)
+      const today = new Date().toISOString().split('T')[0];
+      params.append('businessDate', today);
+      console.log(`📦 Using businessDate: ${today}`);
+    }
     
     const endpoint = `/orders/v2/orders${params.toString() ? '?' + params.toString() : ''}`;
+    console.log(`📦 Orders endpoint: ${this.config.baseUrl}${endpoint}`);
     return await this.makeAuthenticatedRequest(endpoint);
   }
 
