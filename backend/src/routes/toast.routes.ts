@@ -142,13 +142,23 @@ router.get('/menu-items', async (req, res) => {
 // Get orders from Toast
 router.get('/orders', async (req, res) => {
   try {
-    const options = {
-      startDate: req.query.startDate as string,
-      endDate: req.query.endDate as string,
-      pageSize: parseInt(req.query.pageSize as string) || 100
+    let startDate = req.query.startDate as string
+    let endDate = req.query.endDate as string
+    const pageSize = parseInt(req.query.pageSize as string) || 100
+    
+    // Provide default date range if not specified (last 7 days)
+    if (!startDate || !endDate) {
+      const today = new Date()
+      const sevenDaysAgo = new Date(today)
+      sevenDaysAgo.setDate(today.getDate() - 7)
+      
+      startDate = sevenDaysAgo.toISOString().split('T')[0]
+      endDate = today.toISOString().split('T')[0]
+      
+      console.log(`📦 Using default date range for orders: ${startDate} to ${endDate}`)
     }
 
-    const result = await toastPOS.getOrders(options.startDate, options.endDate)
+    const result = await toastPOS.getOrders(startDate, endDate)
     
     if (result.success) {
       res.json({
@@ -306,7 +316,19 @@ router.post('/sync', async (req, res) => {
 router.get('/analytics', async (req, res) => {
   try {
     console.log('📊 Analytics endpoint called with params:', req.query)
-    const { startDate, endDate } = req.query
+    let { startDate, endDate } = req.query
+    
+    // Provide default date range if not specified (last 30 days)
+    if (!startDate || !endDate) {
+      const today = new Date()
+      const thirtyDaysAgo = new Date(today)
+      thirtyDaysAgo.setDate(today.getDate() - 30)
+      
+      startDate = thirtyDaysAgo.toISOString().split('T')[0] as string
+      endDate = today.toISOString().split('T')[0] as string
+      
+      console.log(`📊 Using default date range: ${startDate} to ${endDate}`)
+    }
     
     // Get recent Toast orders for analytics
     console.log('📊 Fetching Toast orders for analytics...')
