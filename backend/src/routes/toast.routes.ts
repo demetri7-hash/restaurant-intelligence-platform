@@ -455,11 +455,17 @@ function getPacificDateOnly(date: Date): string {
 function getDateRange(preset?: string, customStartDate?: string, customEndDate?: string): { startDate: string, endDate: string } {
   const now = new Date();
   
-  // Use custom dates if provided (simple YYYY-MM-DD format for businessDate)
+  // Use custom dates if provided (convert to yyyyMMdd format for businessDate)
   if (customStartDate && customEndDate) {
+    // Convert custom dates from YYYY-MM-DD to yyyyMMdd format
+    const convertToBusinessDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return getPacificDateOnly(date);
+    };
+    
     return { 
-      startDate: customStartDate, 
-      endDate: customEndDate 
+      startDate: convertToBusinessDate(customStartDate), 
+      endDate: convertToBusinessDate(customEndDate) 
     };
   }
   
