@@ -261,6 +261,26 @@ export class ToastPOSService {
     return await this.makeAuthenticatedRequest(endpoint);
   }
 
+  async getOrder(orderId: string): Promise<ToastApiResult> {
+    console.log(`Getting order ${orderId}...`);
+    return await this.makeAuthenticatedRequest(`/orders/v2/orders/${orderId}`);
+  }
+
+  async getCustomers(): Promise<ToastApiResult> {
+    console.log('Getting customers...');
+    return await this.makeAuthenticatedRequest('/customers/v1/customers');
+  }
+
+  async syncAllData(): Promise<ToastApiResult> {
+    console.log('Syncing all data...');
+    // This would be a complex operation to sync all data
+    // For now, just return a placeholder
+    return {
+      success: false,
+      error: 'Sync all data not fully implemented yet'
+    };
+  }
+
   async testConnection(): Promise<ToastConnectionTestResult> {
     try {
       console.log('\n🧪 === TOAST POS CONNECTION TEST ===');

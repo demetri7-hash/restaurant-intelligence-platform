@@ -1,9 +1,12 @@
 import express from 'express'
 import { PrismaClient } from '@prisma/client'
-import { toastPOS } from '../services/toastPOS.service.js'
+import { ToastPOSService } from '../services/toastPOS-clean.service.js'
 
 const router = express.Router()
 const prisma = new PrismaClient()
+
+// Initialize Toast POS service instance  
+const toastPOS = new ToastPOSService()
 
 /**
  * Toast POS API Routes
@@ -18,6 +21,11 @@ router.get('/debug-config', (req, res) => {
       success: true,
       message: 'Toast configuration status',
       config: config,
+      environment: {
+        TOAST_CLIENT_ID: process.env.TOAST_CLIENT_ID ? `${process.env.TOAST_CLIENT_ID.substring(0, 8)}...` : 'NOT SET',
+        TOAST_CLIENT_SECRET: process.env.TOAST_CLIENT_SECRET ? `${process.env.TOAST_CLIENT_SECRET.substring(0, 8)}...` : 'NOT SET',
+        TOAST_RESTAURANT_GUID: process.env.TOAST_RESTAURANT_GUID ? `${process.env.TOAST_RESTAURANT_GUID.substring(0, 8)}...` : 'NOT SET'
+      },
       timestamp: new Date().toISOString()
     })
   } catch (error) {
@@ -51,7 +59,7 @@ router.get('/test-connection', async (req, res) => {
       res.status(500).json({
         success: false,
         message: 'Toast POS connection failed',
-        error: result.error,
+        details: result.details,
         timestamp: new Date().toISOString()
       })
     }
@@ -104,13 +112,12 @@ router.get('/menu-items', async (req, res) => {
       endDate: req.query.endDate as string
     }
 
-    const result = await toastPOS.getMenuItems(options)
+    const result = await toastPOS.getMenus()
     
     if (result.success) {
       res.json({
         success: true,
         data: result.data,
-        pagination: result.pagination,
         count: result.data?.length || 0,
         timestamp: new Date().toISOString()
       })
@@ -141,13 +148,12 @@ router.get('/orders', async (req, res) => {
       pageSize: parseInt(req.query.pageSize as string) || 100
     }
 
-    const result = await toastPOS.getOrders(options)
+    const result = await toastPOS.getOrders(options.startDate, options.endDate)
     
     if (result.success) {
       res.json({
         success: true,
         data: result.data,
-        pagination: result.pagination,
         count: result.data?.length || 0,
         timestamp: new Date().toISOString()
       })
@@ -208,13 +214,12 @@ router.get('/customers', async (req, res) => {
       endDate: req.query.endDate as string
     }
 
-    const result = await toastPOS.getCustomers(options)
+    const result = await toastPOS.getCustomers()
     
     if (result.success) {
       res.json({
         success: true,
         data: result.data,
-        pagination: result.pagination,
         count: result.data?.length || 0,
         timestamp: new Date().toISOString()
       })
@@ -247,7 +252,7 @@ router.post('/sync', async (req, res) => {
       pageSize: parseInt(req.body.pageSize as string) || 100
     }
 
-    const result = await toastPOS.syncAllData(options)
+    const result = await toastPOS.syncAllData()
     
     if (result.success && result.data) {
       // Store synchronized data in our database
