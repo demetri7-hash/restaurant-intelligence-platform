@@ -441,9 +441,15 @@ function getToastDate(date: Date, isStartOfDay: boolean = true): string {
 }
 
 function getPacificDateOnly(date: Date): string {
-  return date.toLocaleDateString('en-CA', { 
-    timeZone: 'America/Los_Angeles'
-  });
+  // Get the date in Pacific timezone
+  const pacificDate = new Date(date.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  
+  // Format as yyyyMMdd for Toast API
+  const year = pacificDate.getFullYear();
+  const month = String(pacificDate.getMonth() + 1).padStart(2, '0');
+  const day = String(pacificDate.getDate()).padStart(2, '0');
+  
+  return `${year}${month}${day}`;
 }
 
 function getDateRange(preset?: string, customStartDate?: string, customEndDate?: string): { startDate: string, endDate: string } {

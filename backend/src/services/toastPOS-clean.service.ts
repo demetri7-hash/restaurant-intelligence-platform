@@ -263,7 +263,11 @@ export class ToastPOSService {
       
       if (sameDay) {
         // Use businessDate for same-day queries (avoids 1-hour limit)
-        const businessDate = start.toISOString().split('T')[0]; // YYYY-MM-DD
+        // Format as yyyyMMdd for Toast API
+        const year = start.getFullYear();
+        const month = String(start.getMonth() + 1).padStart(2, '0');
+        const day = String(start.getDate()).padStart(2, '0');
+        const businessDate = `${year}${month}${day}`;
         params.append('businessDate', businessDate);
         console.log(`📦 Using businessDate (same day): ${businessDate}`);
       } else {
@@ -275,7 +279,11 @@ export class ToastPOSService {
     } else {
       // Default to today's business date
       const today = new Date();
-      const businessDate = today.toISOString().split('T')[0];
+      // Format as yyyyMMdd for Toast API
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const businessDate = `${year}${month}${day}`;
       params.append('businessDate', businessDate);
       console.log(`📦 Using default businessDate: ${businessDate}`);
     }
