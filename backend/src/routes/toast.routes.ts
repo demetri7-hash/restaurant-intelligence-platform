@@ -29,10 +29,34 @@ router.get('/date-options', (req, res) => {
     })
     
     const presets = {
-      today: getDateRange('today'),
-      yesterday: getDateRange('yesterday'), 
-      last7days: getDateRange('last7days'),
-      lastweek: getDateRange('lastweek')
+      today: {
+        ...getDateRange('today'),
+        displayDates: {
+          startDate: getPacificDateOnly(new Date()),
+          endDate: getPacificDateOnly(new Date())
+        }
+      },
+      yesterday: {
+        ...getDateRange('yesterday'),
+        displayDates: {
+          startDate: getPacificDateOnly(new Date(new Date().getTime() - 24*60*60*1000)),
+          endDate: getPacificDateOnly(new Date(new Date().getTime() - 24*60*60*1000))
+        }
+      },
+      last7days: {
+        ...getDateRange('last7days'),
+        displayDates: {
+          startDate: getPacificDateOnly(new Date(new Date().getTime() - 7*24*60*60*1000)),
+          endDate: getPacificDateOnly(new Date())
+        }
+      },
+      lastweek: {
+        ...getDateRange('lastweek'),
+        displayDates: {
+          startDate: "Previous Monday",
+          endDate: "Previous Sunday"
+        }
+      }
     }
     
     res.json({
@@ -379,63 +403,121 @@ router.post('/sync', async (req, res) => {
 })
 
 // Analytics endpoint - Toast data analytics
-// Helper function to get dates in Pacific timezone
-function getPacificDate(date: Date): string {
+// Helper function to get dates in Pacific timezone with proper Toast API format
+function getPacificDateTime(date: Date, isStartOfDay: boolean = true): string {
+  // Create a new date in Pacific timezone
+  const pacificOffset = -8 * 60; // Pacific Standard Time is UTC-8
+  const isDST = isDaylightSavingTime(date);
+  const offset = isDST ? -7 * 60 : -8 * 60; // PDT is UTC-7, PST is UTC-8
+  
+  const pacificDate = new Date(date.getTime() + (offset * 60 * 1000));
+  
+  if (isStartOfDay) {
+    pacificDate.setUTCHours(0, 0, 0, 0);
+  } else {
+    pacificDate.setUTCHours(23, 59, 59, 999);
+  }
+  
+  // Format for Toast API: yyyy-MM-dd'T'HH:mm:ss.SSSZ
+  const year = pacificDate.getUTCFullYear();
+  const month = String(pacificDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(pacificDate.getUTCDate()).padStart(2, '0');
+  const hours = String(pacificDate.getUTCHours()).padStart(2, '0');
+  const minutes = String(pacificDate.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(pacificDate.getUTCSeconds()).padStart(2, '0');
+  const milliseconds = String(pacificDate.getUTCMilliseconds()).padStart(3, '0');
+  
+  const offsetHours = Math.abs(offset / 60);
+  const offsetSign = offset < 0 ? '-' : '+';
+  const offsetString = `${offsetSign}${String(offsetHours).padStart(2, '0')}00`;
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}${offsetString}`;
+}
+
+function isDaylightSavingTime(date: Date): boolean {
+  // Simple DST check for Pacific timezone (March-November roughly)
+  const month = date.getMonth();
+  const day = date.getDate();
+  const dayOfWeek = date.getDay();
+  
+  // DST starts second Sunday in March
+  if (month < 2 || month > 10) return false; // Jan, Feb, Dec
+  if (month > 2 && month < 10) return true; // Apr-Oct
+  
+  // March and November need day calculations
+  if (month === 2) { // March
+    return day >= (14 - dayOfWeek);
+  } else { // November
+    return day < (7 - dayOfWeek);
+  }
+}
+
+function getPacificDateOnly(date: Date): string {
+  // Get just the date part in Pacific timezone (YYYY-MM-DD)
   return date.toLocaleDateString('en-CA', { 
     timeZone: 'America/Los_Angeles'
-  }) // Returns YYYY-MM-DD format
+  });
 }
 
 function getDateRange(preset?: string, customStartDate?: string, customEndDate?: string): { startDate: string, endDate: string } {
-  const now = new Date()
+  const now = new Date();
   
-  // Use custom dates if provided
+  // Use custom dates if provided (convert to Toast API format)
   if (customStartDate && customEndDate) {
-    return { startDate: customStartDate, endDate: customEndDate }
+    const startDateObj = new Date(`${customStartDate}T00:00:00`);
+    const endDateObj = new Date(`${customEndDate}T23:59:59`);
+    return { 
+      startDate: getPacificDateTime(startDateObj, true), 
+      endDate: getPacificDateTime(endDateObj, false) 
+    };
   }
   
   // Handle preset options
   switch (preset) {
     case 'today':
-      const today = getPacificDate(now)
-      return { startDate: today, endDate: today }
+      return { 
+        startDate: getPacificDateTime(now, true), 
+        endDate: getPacificDateTime(now, false) 
+      };
       
     case 'yesterday':
-      const yesterday = new Date(now)
-      yesterday.setDate(now.getDate() - 1)
-      const yesterdayStr = getPacificDate(yesterday)
-      return { startDate: yesterdayStr, endDate: yesterdayStr }
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      return { 
+        startDate: getPacificDateTime(yesterday, true), 
+        endDate: getPacificDateTime(yesterday, false) 
+      };
       
     case 'last7days':
-      const sevenDaysAgo = new Date(now)
-      sevenDaysAgo.setDate(now.getDate() - 7)
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
       return { 
-        startDate: getPacificDate(sevenDaysAgo), 
-        endDate: getPacificDate(now) 
-      }
+        startDate: getPacificDateTime(sevenDaysAgo, true), 
+        endDate: getPacificDateTime(now, false) 
+      };
       
     case 'lastweek':
       // Get last Monday through Sunday in Pacific timezone
-      const lastSunday = new Date(now)
-      const daysFromSunday = now.getDay() // 0 = Sunday, 1 = Monday, etc.
-      lastSunday.setDate(now.getDate() - daysFromSunday - 7) // Go to last Sunday
+      const lastSunday = new Date(now);
+      const daysFromSunday = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      lastSunday.setDate(now.getDate() - daysFromSunday - 7); // Go to last Sunday
       
-      const lastMonday = new Date(lastSunday)
-      lastMonday.setDate(lastSunday.getDate() + 1) // Monday after last Sunday
+      const lastMonday = new Date(lastSunday);
+      lastMonday.setDate(lastSunday.getDate() + 1); // Monday after last Sunday
       
       return {
-        startDate: getPacificDate(lastMonday),
-        endDate: getPacificDate(lastSunday)
-      }
+        startDate: getPacificDateTime(lastMonday, true),
+        endDate: getPacificDateTime(lastSunday, false)
+      };
       
     default:
       // Default to last 7 days
-      const defaultStart = new Date(now)
-      defaultStart.setDate(now.getDate() - 7)
+      const defaultStart = new Date(now);
+      defaultStart.setDate(now.getDate() - 7);
       return { 
-        startDate: getPacificDate(defaultStart), 
-        endDate: getPacificDate(now) 
-      }
+        startDate: getPacificDateTime(defaultStart, true), 
+        endDate: getPacificDateTime(now, false) 
+      };
   }
 }
 

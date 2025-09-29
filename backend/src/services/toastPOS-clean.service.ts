@@ -256,15 +256,21 @@ export class ToastPOSService {
     const params = new URLSearchParams();
     
     if (startDate && endDate) {
-      // Use date range if both provided
-      params.append('startDate', startDate);
-      params.append('endDate', endDate);
-      console.log(`📦 Using date range: ${startDate} to ${endDate}`);
+      // URL encode the dates properly for Toast API (+ becomes %2B)
+      const encodedStartDate = encodeURIComponent(startDate);
+      const encodedEndDate = encodeURIComponent(endDate);
+      
+      params.append('startDate', encodedStartDate);
+      params.append('endDate', encodedEndDate);
+      console.log(`📦 Using encoded date range: ${encodedStartDate} to ${encodedEndDate}`);
     } else {
-      // Use businessDate for single day (today)
-      const today = new Date().toISOString().split('T')[0];
-      params.append('businessDate', today);
-      console.log(`📦 Using businessDate: ${today}`);
+      // Use businessDate for single day (today) with proper encoding
+      const today = new Date();
+      const businessDate = today.toISOString();
+      const encodedBusinessDate = encodeURIComponent(businessDate);
+      
+      params.append('businessDate', encodedBusinessDate);
+      console.log(`📦 Using encoded businessDate: ${encodedBusinessDate}`);
     }
     
     const endpoint = `/orders/v2/orders${params.toString() ? '?' + params.toString() : ''}`;
