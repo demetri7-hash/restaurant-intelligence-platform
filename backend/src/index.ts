@@ -10,7 +10,10 @@ import { PrismaClient } from '@prisma/client'
 import { ToastPOSService } from './services/toastPOS-clean.service.js'
 
 // Load environment variables
-dotenv.config()
+// In production, prioritize system environment variables over .env file
+dotenv.config({ 
+  override: process.env.NODE_ENV === 'production' 
+})
 
 // Initialize Prisma client
 const prisma = new PrismaClient()
