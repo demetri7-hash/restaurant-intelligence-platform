@@ -6,12 +6,17 @@ import morgan from 'morgan'
 import rateLimit from 'express-rate-limit'
 import dotenv from 'dotenv'
 import { PrismaClient } from '@prisma/client'
+// Import Toast service for live API testing
+import { ToastPOSService } from './services/toastPOS-clean.service.js'
 
 // Load environment variables
 dotenv.config()
 
 // Initialize Prisma client
 const prisma = new PrismaClient()
+
+// Initialize Toast POS service
+const toastService = new ToastPOSService()
 
 // Initialize Express app
 const app = express()
@@ -116,27 +121,66 @@ app.get('/api/test-connection', async (req, res) => {
   }
 })
 
-// Toast POS API Test Endpoint
+// Toast POS API Test Endpoint - Now with REAL API calls!
 app.get('/api/toast/test-connection', async (req, res) => {
   try {
-    res.json({
-      success: true,
-      message: 'Toast POS endpoint is ready! 🚀',
-      data: {
-        status: 'Connected',
-        credentials: {
-          clientId: process.env.TOAST_CLIENT_ID ? `${process.env.TOAST_CLIENT_ID.substring(0, 8)}...` : 'Not set',
-          restaurantGuid: process.env.TOAST_RESTAURANT_GUID || 'Not set',
-          scopes: process.env.TOAST_SCOPES?.split(' ').length || 0
-        }
-      },
-      timestamp: new Date().toISOString()
-    })
+    console.log('🧪 Testing Toast POS connection with real credentials and restaurant GUID...')
+    const result = await toastService.testConnection()
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Toast POS connection successful! 🎉',
+        data: {
+          ...result.data,
+          authenticated: true
+        },
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Toast POS connection failed',
+        error: result.details || 'Connection failed',
+        timestamp: new Date().toISOString()
+      })
+    }
   } catch (error) {
-    console.error('❌ Toast endpoint error:', error)
+    console.error('❌ Toast connection test error:', error)
     res.status(500).json({
       success: false,
-      message: 'Endpoint test failed',
+      message: 'Connection test failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// Get real restaurant data from Toast API
+app.get('/api/toast/restaurant', async (req, res) => {
+  try {
+    console.log('📋 Fetching restaurant info from Toast POS...')
+    const result = await toastService.getRestaurant()
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Restaurant data retrieved successfully',
+        data: result.data,
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch restaurant data',
+        error: result.error,
+        timestamp: new Date().toISOString()
+      })
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Restaurant data fetch failed',
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     })

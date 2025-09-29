@@ -1,0 +1,37 @@
+# Koyeb Deployment Configuration
+# Restaurant Intelligence Platform
+# 
+# Deployment Instructions:
+# 1. This is a monorepo with frontend (Next.js) and backend (Node.js/Express)
+# 2. The main deployable service is the backend API server
+# 3. Frontend can be deployed separately to Vercel or served statically
+#
+# Build Commands:
+# - Backend: cd backend && npm install && npm run build
+# - Frontend: cd frontend && npm install && npm run build
+#
+# Start Command:
+# - Backend API: cd backend && npm start (runs on PORT from environment)
+#
+# Environment Variables Required:
+# - DATABASE_URL (PostgreSQL connection string)
+# - PORT (default: 3001)
+# - NODE_ENV=production
+# - All Toast POS API credentials
+# - JWT_SECRET
+# - CORS_ORIGIN (frontend URL)
+#
+# Health Check Endpoint:
+# - GET /health (returns JSON with status)
+#
+# Main API Endpoints:
+# - GET /api/test-connection (database test)
+# - GET /api/restaurants (restaurant data)
+# - GET /api/toast/* (Toast POS integration)
+
+# Buildpack Detection
+# This should be detected as a Node.js project due to package.json
+# If not detected, use: heroku/nodejs buildpack
+
+# For manual buildpack specification:
+# echo 'heroku/nodejs' > .buildpacks

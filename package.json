@@ -1,0 +1,47 @@
+{
+  "name": "restaurant-intelligence-platform",
+  "version": "1.0.0",
+  "description": "Restaurant Intelligence Platform - Full Stack Application with Next.js Frontend and Node.js API Backend",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm install && npm run build",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "start": "npm run start:backend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "restaurant",
+    "pos",
+    "analytics",
+    "toast",
+    "square",
+    "nextjs",
+    "express",
+    "postgresql",
+    "prisma"
+  ],
+  "author": "Restaurant Intelligence Platform",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/demetri7-hash/restaurant-intelligence-platform.git"
+  }
+}

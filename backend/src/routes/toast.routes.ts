@@ -299,15 +299,15 @@ router.get('/analytics', async (req, res) => {
 
     // Calculate analytics from Toast data
     const orders = ordersResult.data
-    const totalRevenue = orders.reduce((sum, order) => {
-      return sum + (order.checks?.reduce((checkSum, check) => checkSum + check.totalAmount, 0) || 0)
+    const totalRevenue = orders.reduce((sum: number, order: any) => {
+      return sum + (order.checks?.reduce((checkSum: number, check: any) => checkSum + check.totalAmount, 0) || 0)
     }, 0)
 
     const analytics = {
       totalOrders: orders.length,
       totalRevenue,
       averageTicket: orders.length > 0 ? totalRevenue / orders.length : 0,
-      ordersByService: orders.reduce((acc, order) => {
+      ordersByService: orders.reduce((acc: Record<string, number>, order: any) => {
         acc[order.restaurantService] = (acc[order.restaurantService] || 0) + 1
         return acc
       }, {} as Record<string, number>),
@@ -338,126 +338,232 @@ router.get('/analytics', async (req, res) => {
 async function syncRestaurantData(restaurant: any) {
   if (!restaurant) return
 
-  await prisma.restaurant.upsert({
-    where: { posLocationId: restaurant.guid },
-    update: {
-      name: restaurant.restaurantName,
-      address: restaurant.address?.address1 || '',
-      city: restaurant.address?.city || '',
-      state: restaurant.address?.stateCode || '',
-      zipCode: restaurant.address?.zipCode || '',
-      phone: restaurant.phoneNumber || '',
-      timezone: restaurant.timeZone,
-      posSystem: 'toast',
-      updatedAt: new Date()
-    },
-    create: {
-      name: restaurant.restaurantName,
-      slug: restaurant.restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      address: restaurant.address?.address1 || '',
-      city: restaurant.address?.city || '',
-      state: restaurant.address?.stateCode || '',
-      zipCode: restaurant.address?.zipCode || '',
-      country: restaurant.address?.countryCode || 'US',
-      phone: restaurant.phoneNumber || '',
-      cuisineType: 'Mixed', // Default, could be enhanced
-      posSystem: 'toast',
-      posLocationId: restaurant.guid,
-      timezone: restaurant.timeZone,
-      status: 'active'
-    }
+  // First check if restaurant exists by posLocationId
+  const existingRestaurant = await prisma.restaurant.findFirst({
+    where: { posLocationId: restaurant.guid }
   })
+
+  if (existingRestaurant) {
+    // Update existing restaurant
+    await prisma.restaurant.update({
+      where: { id: existingRestaurant.id },
+      data: {
+        name: restaurant.restaurantName,
+        address: restaurant.address?.address1 || '',
+        city: restaurant.address?.city || '',
+        state: restaurant.address?.stateCode || '',
+        zipCode: restaurant.address?.zipCode || '',
+        phone: restaurant.phoneNumber || '',
+        timezone: restaurant.timeZone,
+        posSystem: 'toast',
+        updatedAt: new Date()
+      }
+    })
+  } else {
+    // Create new restaurant
+    await prisma.restaurant.create({
+      data: {
+        name: restaurant.restaurantName,
+        slug: restaurant.restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        address: restaurant.address?.address1 || '',
+        city: restaurant.address?.city || '',
+        state: restaurant.address?.stateCode || '',
+        zipCode: restaurant.address?.zipCode || '',
+        country: restaurant.address?.countryCode || 'US',
+        phone: restaurant.phoneNumber || '',
+        cuisineType: 'Mixed', // Default, could be enhanced
+        posSystem: 'toast',
+        posLocationId: restaurant.guid,
+        timezone: restaurant.timeZone,
+        status: 'active'
+      }
+    })
+  }
 }
 
 async function syncMenuData(menuItems: any[]) {
+  const restaurantId = await getRestaurantId()
+  
   for (const item of menuItems) {
     if (item.isArchived) continue
 
-    await prisma.menuItem.upsert({
-      where: { 
-        restaurantId_posItemId: {
-          restaurantId: await getRestaurantId(),
+    try {
+      // Check if menu item exists
+      const existingItem = await prisma.menuItem.findFirst({
+        where: { 
+          restaurantId: restaurantId,
           posItemId: item.guid
         }
-      },
-      update: {
+      })
+
+      const menuItemData = {
         name: item.name,
         description: item.description || '',
-        basePrice: item.pricingRules?.default || 0,
-        status: item.visibility === 'NONE' ? 'inactive' : 'active',
+        basePrice: parseFloat(item.price) || 0,
+        status: item.visibility === 'HIDDEN' ? 'inactive' : 'active',
         updatedAt: new Date()
-      },
-      create: {
-        restaurantId: await getRestaurantId(),
-        posItemId: item.guid,
-        name: item.name,
-        description: item.description || '',
-        basePrice: item.pricingRules?.default || 0,
-        status: item.visibility === 'NONE' ? 'inactive' : 'active'
       }
-    })
+
+      if (existingItem) {
+        await prisma.menuItem.update({
+          where: { id: existingItem.id },
+          data: menuItemData
+        })
+      } else {
+        await prisma.menuItem.create({
+          data: {
+            ...menuItemData,
+            restaurantId: restaurantId,
+            posItemId: item.guid,
+            isAvailable: !item.isArchived
+          }
+        })
+      }
+    } catch (error) {
+      console.error(`Failed to sync menu item ${item.name}:`, error)
+    }
   }
 }
 
 async function syncOrderData(orders: any[]) {
+  const restaurantId = await getRestaurantId()
+  
   for (const order of orders) {
     if (order.deleted || order.voided) continue
 
-    const totalAmount = order.checks?.reduce((sum: number, check: any) => sum + check.totalAmount, 0) || 0
+    try {
+      const totalAmount = order.checks?.reduce((sum: number, check: any) => sum + (check.totalAmount || 0), 0) || 0
+      const taxAmount = order.checks?.reduce((sum: number, check: any) => sum + (check.taxAmount || 0), 0) || 0
+      const tipAmount = order.checks?.reduce((sum: number, check: any) => sum + (check.tipAmount || 0), 0) || 0
 
-    await prisma.transaction.upsert({
-      where: { posTransactionId: order.guid },
-      update: {
+      // Check if transaction exists
+      const existingTransaction = await prisma.transaction.findFirst({
+        where: { posTransactionId: order.guid }
+      })
+
+      const transactionData = {
         totalAmount,
-        transactionDate: new Date(order.openedDate),
+        subtotal: totalAmount - taxAmount,
+        taxAmount,
+        tipAmount,
+        transactionDate: new Date(order.orderOpenedDate || order.openedDate),
         paymentMethod: getPaymentMethod(order),
-        orderType: mapOrderType(order.restaurantService),
+        orderType: mapOrderType(order.diningOption?.name || order.restaurantService),
+        guestCount: order.numberOfGuests || 1,
         updatedAt: new Date()
-      },
-      create: {
-        restaurantId: await getRestaurantId(),
-        posTransactionId: order.guid,
-        totalAmount,
-        subtotal: totalAmount, // Simplified for now
-        taxAmount: 0, // Would need to calculate from checks
-        tipAmount: 0, // Would need to extract from payments
-        transactionDate: new Date(order.openedDate),
-        paymentMethod: getPaymentMethod(order),
-        orderType: mapOrderType(order.restaurantService),
-        guestCount: order.numberOfGuests || 1
       }
-    })
+
+      if (existingTransaction) {
+        await prisma.transaction.update({
+          where: { id: existingTransaction.id },
+          data: transactionData
+        })
+      } else {
+        await prisma.transaction.create({
+          data: {
+            ...transactionData,
+            restaurantId: restaurantId,
+            posTransactionId: order.guid
+          }
+        })
+      }
+    } catch (error) {
+      console.error(`Failed to sync order ${order.guid}:`, error)
+    }
   }
 }
 
 async function syncCustomerData(customers: any[]) {
+  const restaurantId = await getRestaurantId()
+  
   for (const customer of customers) {
     if (!customer.email && !customer.phone) continue
 
-    await prisma.customer.upsert({
-      where: { 
-        restaurantId_posCustomerId: {
-          restaurantId: await getRestaurantId(),
+    try {
+      // Check if customer exists
+      const existingCustomer = await prisma.customer.findFirst({
+        where: { 
+          restaurantId: restaurantId,
           posCustomerId: customer.guid
         }
-      },
-      update: {
+      })
+
+      const customerData = {
         firstName: customer.firstName || '',
         lastName: customer.lastName || '',
         email: customer.email || '',
         phone: customer.phone || '',
         updatedAt: new Date()
-      },
-      create: {
-        restaurantId: await getRestaurantId(),
-        posCustomerId: customer.guid,
-        firstName: customer.firstName || '',
-        lastName: customer.lastName || '',
-        email: customer.email || '',
-        phone: customer.phone || ''
       }
-    })
+
+      if (existingCustomer) {
+        await prisma.customer.update({
+          where: { id: existingCustomer.id },
+          data: customerData
+        })
+      } else {
+        await prisma.customer.create({
+          data: {
+            ...customerData,
+            restaurantId: restaurantId,
+            posCustomerId: customer.guid
+          }
+        })
+      }
+    } catch (error) {
+      console.error(`Failed to sync customer ${customer.guid}:`, error)
+    }
   }
+}
+
+// Placeholder functions for missing sync methods
+async function syncMenuDataPlaceholder(menuItems: any[]) {
+  console.log('Menu data sync not implemented yet')
+}
+
+async function syncOrderDataPlaceholder(orders: any[]) {
+  console.log('Order data sync not implemented yet')
+}
+
+async function syncCustomerDataPlaceholder(customers: any[]) {
+  console.log('Customer data sync not implemented yet')
+}
+
+// Helper functions for analytics
+function getOrdersByHour(orders: any[]) {
+  const hourlyBreakdown = Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    orders: 0,
+    revenue: 0
+  }))
+  
+  orders.forEach((order: any) => {
+    const hour = new Date(order.orderOpenedDate).getHours()
+    const revenue = order.checks?.reduce((sum: number, check: any) => sum + check.totalAmount, 0) || 0
+    hourlyBreakdown[hour].orders++
+    hourlyBreakdown[hour].revenue += revenue
+  })
+  
+  return hourlyBreakdown
+}
+
+function getTopPaymentMethods(orders: any[]) {
+  const paymentMethods: Record<string, { count: number; amount: number }> = {}
+  
+  orders.forEach((order: any) => {
+    order.checks?.forEach((check: any) => {
+      check.payments?.forEach((payment: any) => {
+        const method = payment.type || 'unknown'
+        if (!paymentMethods[method]) {
+          paymentMethods[method] = { count: 0, amount: 0 }
+        }
+        paymentMethods[method].count++
+        paymentMethods[method].amount += payment.amount
+      })
+    })
+  })
+  
+  return paymentMethods
 }
 
 // Helper functions
@@ -490,25 +596,6 @@ function mapOrderType(restaurantService: string): string {
     'OTHER': 'other'
   }
   return mapping[restaurantService] || 'other'
-}
-
-function getOrdersByHour(orders: any[]): Record<number, number> {
-  return orders.reduce((acc, order) => {
-    const hour = new Date(order.openedDate).getHours()
-    acc[hour] = (acc[hour] || 0) + 1
-    return acc
-  }, {} as Record<number, number>)
-}
-
-function getTopPaymentMethods(orders: any[]): Record<string, number> {
-  const payments = orders.flatMap(order => 
-    order.checks?.flatMap((check: any) => check.payments || []) || []
-  )
-  
-  return payments.reduce((acc, payment) => {
-    acc[payment.type] = (acc[payment.type] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
 }
 
 export default router

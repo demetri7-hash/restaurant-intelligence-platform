@@ -1,21 +1,49 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios'
-import qs from 'qs'
-import dotenv from 'dotenv'
-import { 
-  ToastAuthResponse, 
-  ToastApiResponse, 
-  ToastConfig, 
-  ToastServiceResponse,
-  ToastSyncOptions,
-  ToastRestaurant,
-  ToastMenuItem,
-  ToastMenuGroup,
-  ToastOrder,
-  ToastCustomer,
-  ToastTimeEntry
-} from '../types/toast.types.js'
+import axios, { AxiosInstance, AxiosResponse, AxiosRequestConfig } from 'axios';
+import qs from 'qs';
+import dotenv from 'dotenv';
 
-dotenv.config()
+dotenv.config();
+
+interface ToastConfig {
+  clientId: string;
+  clientSecret: string;
+  environment: string;
+  baseUrl: string;
+  authUrl: string;
+  restaurantGuid: string;
+  managementGroupGuid: string;
+}
+
+interface ToastAuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  scope: string;
+}
+
+interface ToastPagination {
+  page: number;
+  pageSize: number;
+  totalResults: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+interface ToastServiceResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  pagination?: ToastPagination;
+  metadata?: {
+    requestId?: string;
+    executionTime?: number;
+    timestamp?: string;
+    orderCount?: number;
+    [key: string]: any;
+  };
+}
 
 /**
  * Toast POS API Service
@@ -23,25 +51,25 @@ dotenv.config()
  * Supports OAuth 2.0, real-time data sync, and complete restaurant operations
  */
 export class ToastPOSService {
-  private config: ToastConfig
-  private accessToken: string | null = null
-  private tokenExpiry: Date | null = null
-  private httpClient: AxiosInstance
+  private config: ToastConfig;
+  private httpClient: AxiosInstance;
+  private accessToken: string | null = null;
+  private tokenExpiry: Date | null = null;
 
   constructor() {
     // Initialize configuration from environment variables
     this.config = {
       clientId: process.env.TOAST_CLIENT_ID || '',
       clientSecret: process.env.TOAST_CLIENT_SECRET || '',
-      environment: (process.env.TOAST_ENVIRONMENT as 'sandbox' | 'production') || 'production',
+      environment: process.env.TOAST_ENVIRONMENT || 'production',
       baseUrl: process.env.TOAST_BASE_URL || 'https://ws-api.toasttab.com',
-      authUrl: process.env.TOAST_AUTH_URL || 'https://authentication.toasttab.com',
+      authUrl: process.env.TOAST_AUTH_URL || 'https://ws-api.toasttab.com',
       restaurantGuid: process.env.TOAST_RESTAURANT_GUID || '',
       managementGroupGuid: process.env.TOAST_MANAGEMENT_GROUP_GUID || ''
-    }
+    };
 
     // Validate required configuration
-    this.validateConfig()
+    this.validateConfig();
 
     // Initialize HTTP client with default headers
     this.httpClient = axios.create({
@@ -50,59 +78,59 @@ export class ToastPOSService {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       }
-    })
+    });
 
     // Add request interceptor for automatic token refresh and restaurant GUID
     this.httpClient.interceptors.request.use(async (config) => {
       if (!this.isTokenValid()) {
-        await this.refreshAccessToken()
+        await this.refreshAccessToken();
       }
       
       if (this.accessToken && !config.url?.includes('oauth')) {
-        config.headers.Authorization = `Bearer ${this.accessToken}`
+        config.headers!.Authorization = `Bearer ${this.accessToken}`;
         // CRITICAL: Toast API requires Restaurant-GUID header for authorization
-        config.headers['Toast-Restaurant-External-ID'] = this.config.restaurantGuid
+        config.headers!['Toast-Restaurant-External-ID'] = this.config.restaurantGuid;
       }
       
-      return config
-    })
+      return config;
+    });
 
     // Add response interceptor for error handling and logging
     this.httpClient.interceptors.response.use(
       (response) => {
         // Log successful responses for debugging
         if (process.env.NODE_ENV === 'development') {
-          console.log(`📡 Toast API Success: ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`)
+          console.log(`📡 Toast API Success: ${response.config.method?.toUpperCase()} ${response.config.url} - Status: ${response.status}`);
         }
-        return response
+        return response;
       },
       async (error) => {
         // Log error details for debugging
-        console.error(`❌ Toast API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`)
-        console.error(`Status: ${error.response?.status}, Message: ${error.response?.data?.message || error.message}`)
+        console.error(`❌ Toast API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+        console.error(`Status: ${error.response?.status}, Message: ${error.response?.data?.message || error.message}`);
         
-        if (error.response?.status === 401 && !error.config._retry) {
-          error.config._retry = true
-          console.log('🔄 Refreshing Toast token due to 401 error...')
-          await this.refreshAccessToken()
-          error.config.headers.Authorization = `Bearer ${this.accessToken}`
-          error.config.headers['Toast-Restaurant-External-ID'] = this.config.restaurantGuid
-          return this.httpClient.request(error.config)
+        if (error.response?.status === 401 && !(error.config as any)._retry) {
+          (error.config as any)._retry = true;
+          console.log('🔄 Refreshing Toast token due to 401 error...');
+          await this.refreshAccessToken();
+          error.config.headers.Authorization = `Bearer ${this.accessToken}`;
+          error.config.headers['Toast-Restaurant-External-ID'] = this.config.restaurantGuid;
+          return this.httpClient.request(error.config);
         }
-        return Promise.reject(error)
+        return Promise.reject(error);
       }
-    )
+    );
   }
 
   /**
    * Validate required configuration
    */
   private validateConfig(): void {
-    const required = ['clientId', 'clientSecret', 'restaurantGuid']
-    const missing = required.filter(key => !this.config[key as keyof ToastConfig])
+    const required = ['clientId', 'clientSecret', 'restaurantGuid'];
+    const missing = required.filter(key => !this.config[key as keyof ToastConfig]);
     
     if (missing.length > 0) {
-      throw new Error(`Missing required Toast API configuration: ${missing.join(', ')}`)
+      throw new Error(`Missing required Toast API configuration: ${missing.join(', ')}`);
     }
   }
 
@@ -114,387 +142,581 @@ export class ToastPOSService {
       this.accessToken && 
       this.tokenExpiry && 
       this.tokenExpiry > new Date()
-    )
+    );
   }
 
   /**
-   * OAuth 2.0 Authentication - Get access token with all required scopes
+   * OAuth 2.0 Client Credentials Flow for Toast API
    */
-  public async authenticate(): Promise<ToastServiceResponse<ToastAuthResponse>> {
+  async refreshAccessToken(): Promise<ToastServiceResponse<ToastAuthResponse>> {
     try {
-      const scopes = process.env.TOAST_SCOPES || 'cashmgmt:read config:read delivery_info.address:read digital_schedule:read guest.pi:read kitchen:read labor:read labor.employees:read menus:read orders:read packaging:read restaurants:read stock:read'
-      
-      const tokenData = qs.stringify({
+      console.log('🔐 Authenticating with Toast API...');
+
+      const authData = {
         grant_type: 'client_credentials',
         client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
-        scope: scopes
-      })
+        client_secret: this.config.clientSecret
+      };
 
       const response: AxiosResponse<ToastAuthResponse> = await axios.post(
-        `${this.config.authUrl}/v1/oauth/token`,
-        tokenData,
+        `${this.config.baseUrl}/authentication/v1/authentication/login`,
+        authData,
         {
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'Toast-Restaurant-External-ID': this.config.restaurantGuid
+          },
+          timeout: 10000
         }
-      )
+      );
 
-      const { access_token, expires_in, scope } = response.data
-      
-      // Store token and calculate expiry (subtract 60 seconds for buffer)
-      this.accessToken = access_token
-      this.tokenExpiry = new Date(Date.now() + (expires_in - 60) * 1000)
-
-      console.log(`✅ Toast POS authenticated successfully`)
-      console.log(`🔑 Token expires: ${this.tokenExpiry}`)
-      console.log(`🏪 Restaurant GUID: ${this.config.restaurantGuid}`)
-      console.log(`📋 Granted scopes: ${scope || 'all requested scopes'}`)
-
-      return {
-        success: true,
-        data: response.data
+      if (response.data.access_token) {
+        this.accessToken = response.data.access_token;
+        // Set expiry with 5-minute buffer for safety
+        this.tokenExpiry = new Date(Date.now() + (response.data.expires_in * 1000) - 300000);
+        
+        console.log('✅ Toast authentication successful');
+        return {
+          success: true,
+          data: response.data,
+          message: 'Authentication successful'
+        };
+      } else {
+        throw new Error('Invalid authentication response from Toast API');
       }
     } catch (error: any) {
-      console.error('❌ Toast authentication failed:', error.response?.data || error.message)
+      console.error('❌ Toast authentication failed:', error.response?.data || error.message);
       return {
         success: false,
-        error: error.response?.data?.error_description || 'Authentication failed'
-      }
+        error: error.response?.data?.error_description || error.message || 'Authentication failed'
+      };
     }
   }
 
   /**
-   * Refresh access token automatically
+   * Test Toast API connection
    */
-  private async refreshAccessToken(): Promise<void> {
-    const result = await this.authenticate()
-    if (!result.success) {
-      throw new Error(`Token refresh failed: ${result.error}`)
+  async testConnection(): Promise<ToastServiceResponse> {
+    try {
+      console.log('🧪 Testing Toast POS connection...');
+      
+      // First authenticate
+      const authResult = await this.refreshAccessToken();
+      if (!authResult.success) {
+        return {
+          success: false,
+          error: 'Authentication failed',
+          message: authResult.error
+        };
+      }
+
+      // Try to get restaurant info
+      const restaurantResult = await this.getRestaurant();
+      if (!restaurantResult.success) {
+        return {
+          success: false,
+          error: 'Failed to retrieve restaurant information',
+          message: restaurantResult.error
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Toast POS connection successful',
+        data: {
+          authenticated: true,
+          restaurant: restaurantResult.data,
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: 'Connection test failed',
+        message: error.message
+      };
     }
   }
 
   /**
    * Get restaurant information
    */
-  public async getRestaurant(): Promise<ToastServiceResponse<ToastRestaurant>> {
+  async getRestaurant(): Promise<ToastServiceResponse> {
     try {
-      const response = await this.httpClient.get<ToastApiResponse<ToastRestaurant>>(
-        `${this.config.baseUrl}/config/v1/restaurants/${this.config.restaurantGuid}`
-      )
-
+      console.log('🏪 Fetching restaurant information...');
+      const response = await this.httpClient.get('/restaurants/v1/restaurants');
       return {
         success: true,
-        data: response.data.data
-      }
+        data: response.data,
+        message: 'Restaurant information retrieved successfully'
+      };
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch restaurant info'
-      }
+        error: error.response?.data?.message || error.message || 'Failed to fetch restaurant information'
+      };
     }
   }
 
   /**
-   * Get all menu items for the restaurant
+   * Get menu information (alias for backward compatibility)
    */
-  public async getMenuItems(options: ToastSyncOptions = {}): Promise<ToastServiceResponse<ToastMenuItem[]>> {
-    try {
-      const params = {
-        pageSize: options.pageSize || 100,
-        ...(options.startDate && { startDate: options.startDate }),
-        ...(options.endDate && { endDate: options.endDate })
-      }
-
-      const response = await this.httpClient.get<ToastApiResponse<ToastMenuItem[]>>(
-        `${this.config.baseUrl}/config/v1/restaurants/${this.config.restaurantGuid}/menuItems`,
-        { params }
-      )
-
-      return {
-        success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination ? {
-          currentPage: response.data.pagination.page,
-          totalPages: response.data.pagination.totalPages,
-          totalResults: response.data.pagination.totalResults
-        } : undefined
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch menu items'
-      }
-    }
+  async getMenus(): Promise<ToastServiceResponse> {
+    return this.getMenuItems();
   }
 
   /**
-   * Get menu groups (categories)
+   * Get configuration (for debugging)
    */
-  public async getMenuGroups(): Promise<ToastServiceResponse<ToastMenuGroup[]>> {
-    try {
-      const response = await this.httpClient.get<ToastApiResponse<ToastMenuGroup[]>>(
-        `${this.config.baseUrl}/config/v1/restaurants/${this.config.restaurantGuid}/menuGroups`
-      )
-
-      return {
-        success: true,
-        data: response.data.data || []
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch menu groups'
-      }
-    }
-  }
-
-  /**
-   * Get orders within a date range
-   */
-  public async getOrders(options: ToastSyncOptions = {}): Promise<ToastServiceResponse<ToastOrder[]>> {
-    try {
-      const today = new Date()
-      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
-      
-      const params = {
-        startDate: options.startDate || yesterday.toISOString().split('T')[0],
-        endDate: options.endDate || today.toISOString().split('T')[0],
-        pageSize: options.pageSize || 100
-      }
-
-      const response = await this.httpClient.get<ToastApiResponse<ToastOrder[]>>(
-        `${this.config.baseUrl}/orders/v2/restaurants/${this.config.restaurantGuid}/orders`,
-        { params }
-      )
-
-      return {
-        success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination ? {
-          currentPage: response.data.pagination.page,
-          totalPages: response.data.pagination.totalPages,
-          totalResults: response.data.pagination.totalResults
-        } : undefined
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch orders'
-      }
-    }
-  }
-
-  /**
-   * Get specific order by GUID
-   */
-  public async getOrder(orderGuid: string): Promise<ToastServiceResponse<ToastOrder>> {
-    try {
-      const response = await this.httpClient.get<ToastApiResponse<ToastOrder>>(
-        `${this.config.baseUrl}/orders/v2/restaurants/${this.config.restaurantGuid}/orders/${orderGuid}`
-      )
-
-      return {
-        success: true,
-        data: response.data.data
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch order'
-      }
-    }
-  }
-
-  /**
-   * Get customers
-   */
-  public async getCustomers(options: ToastSyncOptions = {}): Promise<ToastServiceResponse<ToastCustomer[]>> {
-    try {
-      const params = {
-        pageSize: options.pageSize || 100,
-        ...(options.startDate && { startDate: options.startDate }),
-        ...(options.endDate && { endDate: options.endDate })
-      }
-
-      const response = await this.httpClient.get<ToastApiResponse<ToastCustomer[]>>(
-        `${this.config.baseUrl}/customers/v1/restaurants/${this.config.restaurantGuid}/customers`,
-        { params }
-      )
-
-      return {
-        success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination ? {
-          currentPage: response.data.pagination.page,
-          totalPages: response.data.pagination.totalPages,
-          totalResults: response.data.pagination.totalResults
-        } : undefined
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch customers'
-      }
-    }
-  }
-
-  /**
-   * Get time entries (labor data)
-   */
-  public async getTimeEntries(options: ToastSyncOptions = {}): Promise<ToastServiceResponse<ToastTimeEntry[]>> {
-    try {
-      const today = new Date()
-      const params = {
-        businessDate: options.startDate || today.toISOString().split('T')[0],
-        pageSize: options.pageSize || 100
-      }
-
-      const response = await this.httpClient.get<ToastApiResponse<ToastTimeEntry[]>>(
-        `${this.config.baseUrl}/labor/v1/restaurants/${this.config.restaurantGuid}/timeEntries`,
-        { params }
-      )
-
-      return {
-        success: true,
-        data: response.data.data || [],
-        pagination: response.data.pagination ? {
-          currentPage: response.data.pagination.page,
-          totalPages: response.data.pagination.totalPages,
-          totalResults: response.data.pagination.totalResults
-        } : undefined
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch time entries'
-      }
-    }
-  }
-
-  /**
-   * Sync all restaurant data - comprehensive data pull
-   */
-  public async syncAllData(options: ToastSyncOptions = {}): Promise<ToastServiceResponse<{
-    restaurant: ToastRestaurant | undefined
-    menuItems: ToastMenuItem[]
-    orders: ToastOrder[]
-    customers: ToastCustomer[]
-    timeEntries: ToastTimeEntry[]
-  }>> {
-    try {
-      console.log('🔄 Starting comprehensive Toast POS data sync...')
-
-      // Execute all API calls in parallel for efficiency
-      const [
-        restaurantResult,
-        menuItemsResult,
-        ordersResult,
-        customersResult,
-        timeEntriesResult
-      ] = await Promise.all([
-        this.getRestaurant(),
-        this.getMenuItems(options),
-        this.getOrders(options),
-        this.getCustomers(options),
-        this.getTimeEntries(options)
-      ])
-
-      // Check for any critical failures
-      const errors: string[] = []
-      if (!restaurantResult.success) errors.push(`Restaurant: ${restaurantResult.error}`)
-      if (!menuItemsResult.success) errors.push(`Menu Items: ${menuItemsResult.error}`)
-      if (!ordersResult.success) errors.push(`Orders: ${ordersResult.error}`)
-      if (!customersResult.success) errors.push(`Customers: ${customersResult.error}`)
-      if (!timeEntriesResult.success) errors.push(`Time Entries: ${timeEntriesResult.error}`)
-
-      if (errors.length > 0) {
-        console.warn('⚠️  Some data sync operations failed:', errors)
-      }
-
-      const syncedData = {
-        restaurant: restaurantResult.data,
-        menuItems: menuItemsResult.data || [],
-        orders: ordersResult.data || [],
-        customers: customersResult.data || [],
-        timeEntries: timeEntriesResult.data || []
-      }
-
-      console.log('✅ Toast POS data sync completed:', {
-        restaurant: !!syncedData.restaurant,
-        menuItems: syncedData.menuItems.length,
-        orders: syncedData.orders.length,
-        customers: syncedData.customers.length,
-        timeEntries: syncedData.timeEntries.length
-      })
-
-      return {
-        success: true,
-        data: syncedData
-      }
-    } catch (error: any) {
-      console.error('❌ Comprehensive data sync failed:', error)
-      return {
-        success: false,
-        error: error.message || 'Data sync failed'
-      }
-    }
-  }
-
-  /**
-   * Test connection to Toast POS API
-   */
-  public async testConnection(): Promise<ToastServiceResponse<{
-    authenticated: boolean
-    restaurant: string | null
-    apiVersion: string
-    timestamp: string
-  }>> {
-    try {
-      // First test authentication
-      const authResult = await this.authenticate()
-      if (!authResult.success) {
-        return {
-          success: false,
-          error: `Authentication failed: ${authResult.error}`
-        }
-      }
-
-      // Test restaurant API call
-      const restaurantResult = await this.getRestaurant()
-      
-      return {
-        success: true,
-        data: {
-          authenticated: true,
-          restaurant: restaurantResult.data?.restaurantName || null,
-          apiVersion: 'v1/v2',
-          timestamp: new Date().toISOString()
-        }
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Connection test failed'
-      }
-    }
-  }
-
-  /**
-   * Get configuration summary
-   */
-  public getConfig(): Partial<ToastConfig> {
+  getConfig(): Partial<ToastConfig> {
     return {
       environment: this.config.environment,
       baseUrl: this.config.baseUrl,
-      restaurantGuid: this.config.restaurantGuid,
-      // Don't expose sensitive data
-      clientId: this.config.clientId ? `${this.config.clientId.substring(0, 8)}...` : 'Not set'
+      restaurantGuid: this.config.restaurantGuid
+    };
+  }
+
+  /**
+   * Direct authenticate method for backward compatibility
+   */
+  async authenticate(): Promise<ToastServiceResponse<ToastAuthResponse>> {
+    return this.refreshAccessToken();
+  }
+
+  /**
+   * Get orders with pagination support
+   */
+  async getOrders(startDateOrOptions?: string | any, endDate?: string): Promise<ToastServiceResponse> {
+    try {
+      console.log('📦 Fetching orders...');
+      
+      let startDate: string | undefined;
+      let actualEndDate: string | undefined;
+      let page = 1;
+      let pageSize = 50;
+      
+      // Handle both string parameters and options object
+      if (typeof startDateOrOptions === 'string') {
+        startDate = startDateOrOptions;
+        actualEndDate = endDate;
+      } else if (startDateOrOptions && typeof startDateOrOptions === 'object') {
+        startDate = startDateOrOptions.startDate;
+        actualEndDate = startDateOrOptions.endDate;
+        page = startDateOrOptions.page || 1;
+        pageSize = startDateOrOptions.pageSize || 50;
+      }
+      
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (actualEndDate) params.append('endDate', actualEndDate);
+      params.append('page', page.toString());
+      params.append('pageSize', pageSize.toString());
+      
+      const endpoint = `/orders/v2/orders?${params.toString()}`;
+      const response = await this.httpClient.get(endpoint);
+      
+      // Mock pagination data since Toast API may not return it in expected format
+      const orders = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      const totalResults = orders.length;
+      const totalPages = Math.ceil(totalResults / pageSize);
+      
+      const pagination: ToastPagination = {
+        page,
+        pageSize,
+        totalResults,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      };
+      
+      return {
+        success: true,
+        data: orders,
+        message: 'Orders retrieved successfully',
+        pagination,
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to fetch orders'
+      };
     }
+  }
+
+  /**
+   * Get single order by ID
+   */
+  async getOrder(orderId: string): Promise<ToastServiceResponse> {
+    try {
+      console.log(`📦 Fetching order ${orderId}...`);
+      const response = await this.httpClient.get(`/orders/v2/orders/${orderId}`);
+      
+      return {
+        success: true,
+        data: response.data,
+        message: 'Order retrieved successfully'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to fetch order'
+      };
+    }
+  }
+
+  /**
+   * Get menu items with pagination support
+   */
+  async getMenuItems(options?: any): Promise<ToastServiceResponse> {
+    try {
+      console.log('� Fetching menu items...');
+      
+      const page = options?.page || 1;
+      const pageSize = options?.pageSize || 50;
+      
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('pageSize', pageSize.toString());
+      
+      const endpoint = `/menus/v1/menus?${params.toString()}`;
+      const response = await this.httpClient.get(endpoint);
+      
+      // Extract menu items from nested structure
+      const menus = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      const menuItems = menus.flatMap((menu: any) => menu.menuItems || []);
+      
+      const totalResults = menuItems.length;
+      const totalPages = Math.ceil(totalResults / pageSize);
+      
+      const pagination: ToastPagination = {
+        page,
+        pageSize,
+        totalResults,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      };
+      
+      return {
+        success: true,
+        data: menuItems,
+        message: 'Menu items retrieved successfully',
+        pagination,
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to fetch menu items'
+      };
+    }
+  }
+
+  /**
+   * Get customers with pagination support
+   */
+  async getCustomers(options?: any): Promise<ToastServiceResponse> {
+    try {
+      console.log('👥 Fetching customers...');
+      
+      const page = options?.page || 1;
+      const pageSize = options?.pageSize || 50;
+      
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('pageSize', pageSize.toString());
+      
+      const endpoint = `/customers/v1/customers?${params.toString()}`;
+      const response = await this.httpClient.get(endpoint);
+      
+      const customers = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      const totalResults = customers.length;
+      const totalPages = Math.ceil(totalResults / pageSize);
+      
+      const pagination: ToastPagination = {
+        page,
+        pageSize,
+        totalResults,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      };
+      
+      return {
+        success: true,
+        data: customers,
+        message: 'Customers retrieved successfully',
+        pagination,
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to fetch customers'
+      };
+    }
+  }
+
+  /**
+   * Sync all data from Toast API
+   */
+  async syncAllData(options?: any): Promise<ToastServiceResponse> {
+    try {
+      console.log('🔄 Syncing all data from Toast...');
+      
+      const startTime = Date.now();
+      
+      const [restaurant, menus, orders, customers] = await Promise.all([
+        this.getRestaurant(),
+        this.getMenus(),
+        this.getOrders(),
+        this.getCustomers()
+      ]);
+
+      const executionTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        data: {
+          restaurant: restaurant.data,
+          menus: menus.data,
+          orders: orders.data,
+          customers: customers.data,
+          syncStats: {
+            restaurantSynced: restaurant.success,
+            menusSynced: menus.success,
+            ordersSynced: orders.success,
+            customersSynced: customers.success
+          }
+        },
+        message: 'All data synced successfully',
+        metadata: {
+          executionTime,
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to sync data'
+      };
+    }
+  }
+
+  /**
+   * Get comprehensive analytics from Toast data
+   */
+  async getAnalytics(startDate?: string, endDate?: string): Promise<ToastServiceResponse> {
+    try {
+      console.log('📊 Generating comprehensive analytics...');
+      
+      const ordersResult = await this.getOrders(startDate, endDate);
+      if (!ordersResult.success) {
+        return ordersResult;
+      }
+
+      const orders = ordersResult.data || [];
+      
+      // Calculate comprehensive analytics
+      const analytics = this.calculateAnalytics(orders, startDate, endDate);
+
+      return {
+        success: true,
+        data: analytics,
+        message: 'Analytics generated successfully',
+        metadata: {
+          timestamp: new Date().toISOString(),
+          orderCount: orders.length
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to generate analytics'
+      };
+    }
+  }
+
+  /**
+   * Calculate comprehensive analytics from order data
+   */
+  private calculateAnalytics(orders: any[], startDate?: string, endDate?: string) {
+    const totalRevenue = orders.reduce((sum: number, order: any) => {
+      return sum + (order.checks?.reduce((checkSum: number, check: any) => checkSum + (check.totalAmount || 0), 0) || 0);
+    }, 0);
+
+    const totalOrders = orders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Group orders by service type
+    const ordersByService = orders.reduce((acc: Record<string, number>, order: any) => {
+      const service = order.diningOption?.name || order.restaurantService || 'unknown';
+      acc[service] = (acc[service] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Hourly breakdown
+    const hourlyBreakdown = this.getOrdersByHour(orders);
+
+    // Payment methods analysis
+    const paymentMethods = this.getPaymentMethodsAnalysis(orders);
+
+    // Top selling items (if menu items are available in order data)
+    const topSellingItems = this.getTopSellingItems(orders);
+
+    // Customer analysis
+    const customerStats = this.getCustomerStats(orders);
+
+    return {
+      summary: {
+        totalRevenue,
+        totalOrders,
+        averageOrderValue,
+        period: {
+          startDate: startDate || 'recent',
+          endDate: endDate || 'now'
+        }
+      },
+      ordersByService,
+      hourlyBreakdown,
+      paymentMethods,
+      topSellingItems,
+      customerStats,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Get detailed hourly order breakdown
+   */
+  private getOrdersByHour(orders: any[]) {
+    const hourlyBreakdown = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      orders: 0,
+      revenue: 0,
+      averageOrderValue: 0
+    }));
+    
+    orders.forEach((order: any) => {
+      const hour = new Date(order.orderOpenedDate || order.openedDate).getHours();
+      const revenue = order.checks?.reduce((sum: number, check: any) => sum + (check.totalAmount || 0), 0) || 0;
+      
+      hourlyBreakdown[hour].orders++;
+      hourlyBreakdown[hour].revenue += revenue;
+      hourlyBreakdown[hour].averageOrderValue = hourlyBreakdown[hour].orders > 0 
+        ? hourlyBreakdown[hour].revenue / hourlyBreakdown[hour].orders 
+        : 0;
+    });
+    
+    return hourlyBreakdown;
+  }
+
+  /**
+   * Analyze payment methods usage
+   */
+  private getPaymentMethodsAnalysis(orders: any[]) {
+    const paymentMethods: Record<string, { count: number; amount: number; percentage: number }> = {};
+    let totalAmount = 0;
+    let totalTransactions = 0;
+    
+    orders.forEach((order: any) => {
+      order.checks?.forEach((check: any) => {
+        check.payments?.forEach((payment: any) => {
+          const method = payment.type || 'unknown';
+          const amount = payment.amount || 0;
+          
+          if (!paymentMethods[method]) {
+            paymentMethods[method] = { count: 0, amount: 0, percentage: 0 };
+          }
+          
+          paymentMethods[method].count++;
+          paymentMethods[method].amount += amount;
+          totalAmount += amount;
+          totalTransactions++;
+        });
+      });
+    });
+
+    // Calculate percentages
+    Object.keys(paymentMethods).forEach(method => {
+      paymentMethods[method].percentage = totalAmount > 0 
+        ? (paymentMethods[method].amount / totalAmount) * 100 
+        : 0;
+    });
+    
+    return {
+      methods: paymentMethods,
+      totals: {
+        totalAmount,
+        totalTransactions
+      }
+    };
+  }
+
+  /**
+   * Get top selling items from order data
+   */
+  private getTopSellingItems(orders: any[]) {
+    const itemStats: Record<string, { name: string; quantity: number; revenue: number }> = {};
+    
+    orders.forEach((order: any) => {
+      order.checks?.forEach((check: any) => {
+        check.selections?.forEach((selection: any) => {
+          const itemId = selection.item?.guid || selection.itemGroup?.guid || 'unknown';
+          const itemName = selection.item?.name || selection.itemGroup?.name || 'Unknown Item';
+          const quantity = selection.quantity || 0;
+          const revenue = selection.price || 0;
+          
+          if (!itemStats[itemId]) {
+            itemStats[itemId] = { name: itemName, quantity: 0, revenue: 0 };
+          }
+          
+          itemStats[itemId].quantity += quantity;
+          itemStats[itemId].revenue += revenue;
+        });
+      });
+    });
+    
+    // Sort by quantity and return top 10
+    return Object.entries(itemStats)
+      .map(([id, stats]) => ({ id, ...stats }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+  }
+
+  /**
+   * Get customer statistics
+   */
+  private getCustomerStats(orders: any[]) {
+    const uniqueCustomers = new Set();
+    let totalGuests = 0;
+    let ordersWithCustomers = 0;
+    
+    orders.forEach((order: any) => {
+      if (order.customer?.guid) {
+        uniqueCustomers.add(order.customer.guid);
+        ordersWithCustomers++;
+      }
+      totalGuests += order.numberOfGuests || 1;
+    });
+    
+    return {
+      uniqueCustomers: uniqueCustomers.size,
+      totalGuests,
+      averageGuestsPerOrder: orders.length > 0 ? totalGuests / orders.length : 0,
+      customerOrderRate: orders.length > 0 ? (ordersWithCustomers / orders.length) * 100 : 0
+    };
   }
 }
 
-// Create singleton instance
-export const toastPOS = new ToastPOSService()
-export default toastPOS
+// Create and export instance for backward compatibility
+export const toastPOS = new ToastPOSService();
+export default ToastPOSService;
