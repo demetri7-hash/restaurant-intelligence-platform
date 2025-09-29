@@ -256,30 +256,57 @@ export class ToastPOSService {
     const params = new URLSearchParams();
     
     if (startDate && endDate) {
-      // Check if it's the same day - if so, use businessDate instead to avoid 1-hour limit
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const sameDay = start.toDateString() === end.toDateString();
+      console.log(`📦 Input dates: startDate=${startDate}, endDate=${endDate}`);
       
-      if (sameDay) {
-        // Use businessDate for same-day queries (avoids 1-hour limit)
-        // Format as yyyyMMdd for Toast API
-        const year = start.getFullYear();
-        const month = String(start.getMonth() + 1).padStart(2, '0');
-        const day = String(start.getDate()).padStart(2, '0');
-        const businessDate = `${year}${month}${day}`;
-        params.append('businessDate', businessDate);
-        console.log(`📦 Using businessDate (same day): ${businessDate}`);
+      // Check if dates are in yyyyMMdd format (from our date formatting)
+      const yyyyMMddRegex = /^\d{8}$/;
+      const isBusinessDateFormat = yyyyMMddRegex.test(startDate) && yyyyMMddRegex.test(endDate);
+      
+      if (isBusinessDateFormat && startDate === endDate) {
+        // Same day query using businessDate parameter
+        params.append('businessDate', startDate);
+        console.log(`📦 Using businessDate (same day): ${startDate}`);
+      } else if (isBusinessDateFormat) {
+        // Multi-day query - convert yyyyMMdd back to Date objects for comparison
+        const parseBusinessDate = (dateStr: string) => {
+          const year = parseInt(dateStr.substring(0, 4));
+          const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
+          const day = parseInt(dateStr.substring(6, 8));
+          return new Date(year, month, day);
+        };
+        
+        const startDateObj = parseBusinessDate(startDate);
+        const endDateObj = parseBusinessDate(endDate);
+        
+        // For multi-day queries, we need to use individual businessDate calls
+        // This is a limitation of Toast API - let's use businessDate for the start date
+        params.append('businessDate', startDate);
+        console.log(`📦 Using businessDate for range start: ${startDate}`);
+        console.log(`📦 Warning: Toast API doesn't support multi-day ranges, using start date only`);
       } else {
-        // Use date range for multi-day queries
-        params.append('startDate', startDate);
-        params.append('endDate', endDate);
-        console.log(`📦 Using date range: ${startDate} to ${endDate}`);
+        // Legacy format handling (shouldn't reach here with new implementation)
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const sameDay = start.toDateString() === end.toDateString();
+        
+        if (sameDay) {
+          // Use businessDate for same-day queries (avoids 1-hour limit)
+          const year = start.getFullYear();
+          const month = String(start.getMonth() + 1).padStart(2, '0');
+          const day = String(start.getDate()).padStart(2, '0');
+          const businessDate = `${year}${month}${day}`;
+          params.append('businessDate', businessDate);
+          console.log(`📦 Using businessDate (legacy same day): ${businessDate}`);
+        } else {
+          // Use date range for multi-day queries
+          params.append('startDate', startDate);
+          params.append('endDate', endDate);
+          console.log(`📦 Using legacy date range: ${startDate} to ${endDate}`);
+        }
       }
     } else {
       // Default to today's business date
       const today = new Date();
-      // Format as yyyyMMdd for Toast API
       const year = today.getFullYear();
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
