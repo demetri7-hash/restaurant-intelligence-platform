@@ -47,12 +47,47 @@ const limiter = rateLimit({
 })
 
 // Middleware
-app.use(helmet()) // Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'", // Needed for Next.js hydration
+        "'unsafe-eval'", // Needed for Next.js development features
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'", // Needed for Tailwind CSS and inline styles
+        "fonts.googleapis.com"
+      ],
+      fontSrc: [
+        "'self'",
+        "fonts.gstatic.com",
+        "data:"
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "blob:"
+      ],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"]
+    }
+  }
+})) // Security headers
 app.use(compression()) // Gzip compression
 app.use(morgan('combined')) // Logging
 app.use(limiter) // Rate limiting
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000', 
+    'https://provincial-rhianon-restaurantintelligence-b8a4dd49.koyeb.app'
+  ],
   credentials: true
 }))
 app.use(express.json({ limit: '10mb' }))
