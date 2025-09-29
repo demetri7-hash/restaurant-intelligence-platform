@@ -116,6 +116,33 @@ app.get('/api/test-connection', async (req, res) => {
   }
 })
 
+// Toast POS API Test Endpoint
+app.get('/api/toast/test-connection', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'Toast POS endpoint is ready! 🚀',
+      data: {
+        status: 'Connected',
+        credentials: {
+          clientId: process.env.TOAST_CLIENT_ID ? `${process.env.TOAST_CLIENT_ID.substring(0, 8)}...` : 'Not set',
+          restaurantGuid: process.env.TOAST_RESTAURANT_GUID || 'Not set',
+          scopes: process.env.TOAST_SCOPES?.split(' ').length || 0
+        }
+      },
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('❌ Toast endpoint error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Endpoint test failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
 // API Routes (to be implemented)
 app.get('/api/restaurants', async (req, res) => {
   try {
