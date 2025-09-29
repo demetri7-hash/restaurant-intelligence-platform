@@ -9,10 +9,11 @@ import { PrismaClient } from '@prisma/client'
 // Import Toast service for live API testing
 import { ToastPOSService } from './services/toastPOS-clean.service.js'
 
-// Load environment variables
-// In production, system environment variables are used (no .env file)
-// In development, load from .env file
-dotenv.config()
+// Load environment variables only in development
+// In production, Koyeb provides system environment variables
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config()
+}
 
 // Initialize Prisma client
 const prisma = new PrismaClient()
