@@ -253,7 +253,7 @@ export class ToastPOSService {
   }
 
   async getOrders(startDate?: string, endDate?: string): Promise<ToastApiResult> {
-    console.log('Getting orders...');
+    console.log('Getting detailed order information...');
     const params = new URLSearchParams();
     
     if (startDate && endDate) {
@@ -264,26 +264,15 @@ export class ToastPOSService {
       const isBusinessDateFormat = yyyyMMddRegex.test(startDate) && yyyyMMddRegex.test(endDate);
       
       if (isBusinessDateFormat && startDate === endDate) {
-        // Same day query using businessDate parameter
+        // Same day query using businessDate parameter for bulk orders
         params.append('businessDate', startDate);
-        console.log(`📦 Using businessDate (same day): ${startDate}`);
+        console.log(`📦 Using businessDate for bulk orders (same day): ${startDate}`);
       } else if (isBusinessDateFormat) {
-        // Multi-day query - convert yyyyMMdd back to Date objects for comparison
-        const parseBusinessDate = (dateStr: string) => {
-          const year = parseInt(dateStr.substring(0, 4));
-          const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
-          const day = parseInt(dateStr.substring(6, 8));
-          return new Date(year, month, day);
-        };
-        
-        const startDateObj = parseBusinessDate(startDate);
-        const endDateObj = parseBusinessDate(endDate);
-        
-        // For multi-day queries, we need to use individual businessDate calls
-        // This is a limitation of Toast API - let's use businessDate for the start date
+        // Multi-day query - for bulk orders, we'll use businessDate for the start date
+        // Toast ordersBulk API works better with businessDate for daily queries
         params.append('businessDate', startDate);
-        console.log(`📦 Using businessDate for range start: ${startDate}`);
-        console.log(`📦 Warning: Toast API doesn't support multi-day ranges, using start date only`);
+        console.log(`📦 Using businessDate for bulk orders: ${startDate}`);
+        console.log(`📦 Note: Using start date for bulk query, Toast API limitation`);
       } else {
         // Legacy format handling (shouldn't reach here with new implementation)
         const start = new Date(startDate);
@@ -291,18 +280,18 @@ export class ToastPOSService {
         const sameDay = start.toDateString() === end.toDateString();
         
         if (sameDay) {
-          // Use businessDate for same-day queries (avoids 1-hour limit)
+          // Use businessDate for same-day bulk queries
           const year = start.getFullYear();
           const month = String(start.getMonth() + 1).padStart(2, '0');
           const day = String(start.getDate()).padStart(2, '0');
           const businessDate = `${year}${month}${day}`;
           params.append('businessDate', businessDate);
-          console.log(`📦 Using businessDate (legacy same day): ${businessDate}`);
+          console.log(`📦 Using businessDate for bulk orders (legacy same day): ${businessDate}`);
         } else {
-          // Use date range for multi-day queries
+          // Use date range for multi-day queries (ISO format)
           params.append('startDate', startDate);
           params.append('endDate', endDate);
-          console.log(`📦 Using legacy date range: ${startDate} to ${endDate}`);
+          console.log(`📦 Using legacy date range for bulk orders: ${startDate} to ${endDate}`);
         }
       }
     } else {
@@ -313,11 +302,16 @@ export class ToastPOSService {
       const day = String(today.getDate()).padStart(2, '0');
       const businessDate = `${year}${month}${day}`;
       params.append('businessDate', businessDate);
-      console.log(`📦 Using default businessDate: ${businessDate}`);
+      console.log(`📦 Using default businessDate for bulk orders: ${businessDate}`);
     }
+
+    // Add pagination parameters for bulk orders
+    params.append('pageSize', '100'); // Maximum allowed
+    params.append('page', '1'); // Start with first page
     
-    const endpoint = `/orders/v2/orders?${params.toString()}`;
-    console.log(`📦 Full orders URL: ${this.config.baseUrl}${endpoint}`);
+    // Use ordersBulk endpoint for detailed order information
+    const endpoint = `/orders/v2/ordersBulk?${params.toString()}`;
+    console.log(`📦 Full bulk orders URL: ${this.config.baseUrl}${endpoint}`);
     return await this.makeAuthenticatedRequest(endpoint);
   }
 
