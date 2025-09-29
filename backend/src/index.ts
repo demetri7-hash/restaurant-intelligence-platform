@@ -53,12 +53,14 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'",
-        "'unsafe-inline'", // Needed for Next.js hydration
-        "'unsafe-eval'", // Needed for Next.js development features
+        "'unsafe-inline'", // Required for Next.js static exports
+        "'unsafe-eval'", // Required for Next.js chunk loading
+        "blob:", // Required for Next.js dynamic imports
+        "data:" // Required for inline scripts
       ],
       styleSrc: [
         "'self'",
-        "'unsafe-inline'", // Needed for Tailwind CSS and inline styles
+        "'unsafe-inline'", // Required for Tailwind CSS and Next.js styles
         "fonts.googleapis.com"
       ],
       fontSrc: [
@@ -71,12 +73,20 @@ app.use(helmet({
         "data:",
         "blob:"
       ],
-      connectSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "blob:", // Required for Next.js chunk loading
+        "data:" // Required for data URLs
+      ],
       objectSrc: ["'none'"],
       frameSrc: ["'none'"],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],
-      formAction: ["'self'"]
+      formAction: ["'self'"],
+      workerSrc: [
+        "'self'",
+        "blob:" // Required for Next.js service workers
+      ]
     }
   }
 })) // Security headers
