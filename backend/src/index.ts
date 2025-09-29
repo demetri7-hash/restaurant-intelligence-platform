@@ -328,6 +328,9 @@ app.get('/api/analytics/dashboard/:restaurantId', async (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   // Serve static files from the frontend build directory
   const frontendBuildPath = path.join(__dirname, '../../frontend/out')
+  console.log('Frontend build path:', frontendBuildPath)
+  console.log('Path exists:', require('fs').existsSync(frontendBuildPath))
+  
   app.use(express.static(frontendBuildPath))
   
   // Handle client-side routing - serve index.html for non-API routes
@@ -337,6 +340,7 @@ if (process.env.NODE_ENV === 'production') {
       return next()
     }
     
+    console.log('Serving SPA route for:', req.path)
     // Serve index.html for all other routes (SPA routing)
     res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
       if (err) {
