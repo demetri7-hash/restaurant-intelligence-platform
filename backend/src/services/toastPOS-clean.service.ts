@@ -399,6 +399,241 @@ export class ToastPOSService {
     }
   }
 
+  /**
+   * ANALYTICS API ENDPOINTS - Comprehensive reporting data
+   */
+
+  /**
+   * Get aggregated sales data with labor information
+   */
+  async getAggregatedSales(businessDate: string) {
+    const authResult = await this.authenticate();
+    if (!authResult.success || !authResult.data?.token) {
+      return { success: false, error: 'Authentication failed' };
+    }
+    
+    try {
+      const response = await axios.post(`https://ws-api.toasttab.com/reporting/v1/reports/aggregatedSales`, {
+        restaurants: [this.config.restaurantGuid],
+        businessDate
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authResult.data.token}`,
+          'Content-Type': 'application/json',
+          'Toast-Restaurant-External-ID': this.config.restaurantGuid
+        }
+      });
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Error fetching aggregated sales:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get detailed check reporting data
+   */
+  async getCheckReporting(businessDate: string) {
+    const authResult = await this.authenticate();
+    if (!authResult.success || !authResult.data?.token) {
+      return { success: false, error: 'Authentication failed' };
+    }
+    
+    try {
+      const response = await axios.post(`https://ws-api.toasttab.com/reporting/v1/reports/checks`, {
+        restaurants: [this.config.restaurantGuid],
+        businessDate
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authResult.data.token}`,
+          'Content-Type': 'application/json',
+          'Toast-Restaurant-External-ID': this.config.restaurantGuid
+        }
+      });
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Error fetching check reporting:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get labor reporting data for hourly employees
+   */
+  async getLaborReporting(businessDate: string) {
+    const authResult = await this.authenticate();
+    if (!authResult.success || !authResult.data?.token) {
+      return { success: false, error: 'Authentication failed' };
+    }
+    
+    try {
+      const response = await axios.post(`https://ws-api.toasttab.com/reporting/v1/reports/labor`, {
+        restaurants: [this.config.restaurantGuid],
+        businessDate
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authResult.data.token}`,
+          'Content-Type': 'application/json',
+          'Toast-Restaurant-External-ID': this.config.restaurantGuid
+        }
+      });
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Error fetching labor reporting:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get menu analytics reporting data
+   */
+  async getMenuAnalytics(businessDate: string) {
+    const authResult = await this.authenticate();
+    if (!authResult.success || !authResult.data?.token) {
+      return { success: false, error: 'Authentication failed' };
+    }
+    
+    try {
+      const response = await axios.post(`https://ws-api.toasttab.com/reporting/v1/reports/menu`, {
+        restaurants: [this.config.restaurantGuid],
+        businessDate
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authResult.data.token}`,
+          'Content-Type': 'application/json',
+          'Toast-Restaurant-External-ID': this.config.restaurantGuid
+        }
+      });
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Error fetching menu analytics:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get payout reporting data by sales date
+   */
+  async getPayoutReporting(businessDate: string) {
+    const authResult = await this.authenticate();
+    if (!authResult.success || !authResult.data?.token) {
+      return { success: false, error: 'Authentication failed' };
+    }
+    
+    try {
+      const response = await axios.post(`https://ws-api.toasttab.com/reporting/v1/reports/payoutBySalesDate`, {
+        restaurants: [this.config.restaurantGuid],
+        businessDate
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authResult.data.token}`,
+          'Content-Type': 'application/json',
+          'Toast-Restaurant-External-ID': this.config.restaurantGuid
+        }
+      });
+      return { success: true, data: response.data };
+    } catch (error: any) {
+      console.error('Error fetching payout reporting:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * LABOR MANAGEMENT API ENDPOINTS
+   */
+
+  /**
+   * Get all employees
+   */
+  async getEmployees() {
+    return await this.makeAuthenticatedRequest(`/labor/v1/employees`);
+  }
+
+  /**
+   * Get employee shifts for a date
+   */
+  async getShifts(businessDate: string) {
+    return await this.makeAuthenticatedRequest(`/labor/v1/shifts?businessDate=${businessDate}`);
+  }
+
+  /**
+   * Get time entries for employees
+   */
+  async getTimeEntries(businessDate: string) {
+    return await this.makeAuthenticatedRequest(`/labor/v1/timeEntries?businessDate=${businessDate}`);
+  }
+
+  /**
+   * Get jobs (positions) in the restaurant
+   */
+  async getJobs() {
+    return await this.makeAuthenticatedRequest(`/labor/v1/jobs`);
+  }
+
+  /**
+   * CONFIGURATION API ENDPOINTS - Restaurant settings and physical config
+   */
+
+  /**
+   * Get restaurant configuration
+   */
+  async getRestaurantConfig() {
+    return await this.makeAuthenticatedRequest(`/config/v1/restaurants/${this.config.restaurantGuid}`);
+  }
+
+  /**
+   * Get dining options
+   */
+  async getDiningOptions() {
+    return await this.makeAuthenticatedRequest(`/config/v1/diningOptions`);
+  }
+
+  /**
+   * Get restaurant tables
+   */
+  async getTables() {
+    return await this.makeAuthenticatedRequest(`/config/v1/tables`);
+  }
+
+  /**
+   * Get discounts
+   */
+  async getDiscounts() {
+    return await this.makeAuthenticatedRequest(`/config/v1/discounts`);
+  }
+
+  /**
+   * Get service charges
+   */
+  async getServiceCharges() {
+    return await this.makeAuthenticatedRequest(`/config/v1/serviceCharges`);
+  }
+
+  /**
+   * Get tax rates
+   */
+  async getTaxRates() {
+    return await this.makeAuthenticatedRequest(`/config/v1/taxRates`);
+  }
+
+  /**
+   * STOCK API ENDPOINTS - Inventory management
+   */
+
+  /**
+   * Get stock counts (inventory levels)
+   */
+  async getStockCounts() {
+    return await this.makeAuthenticatedRequest(`/stock/v1/counts`);
+  }
+
+  /**
+   * Get menu items with stock information
+   */
+  async getMenuItemsWithStock() {
+    return await this.makeAuthenticatedRequest(`/stock/v1/menuItems`);
+  }
+
   // Get configuration info for debugging (with sensitive data masked)
   getConfig() {
     return {

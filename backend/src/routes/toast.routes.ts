@@ -897,4 +897,462 @@ function mapOrderType(restaurantService: string): string {
   return mapping[restaurantService] || 'other'
 }
 
+// ============================================================================
+// COMPREHENSIVE TOAST API ENDPOINTS - ALL AVAILABLE DATA
+// ============================================================================
+
+// Helper function to convert date parameter to business date format
+function getBusinessDateFromParam(dateParam: string): string {
+  if (dateParam === 'today') {
+    return getPacificDateOnly(new Date());
+  } else if (dateParam === 'yesterday') {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return getPacificDateOnly(yesterday);
+  } else {
+    // Try to parse as YYYY-MM-DD or other formats
+    const date = new Date(dateParam);
+    if (isNaN(date.getTime())) {
+      // If invalid date, default to today
+      return getPacificDateOnly(new Date());
+    }
+    return getPacificDateOnly(date);
+  }
+}
+
+// Analytics API endpoints
+router.get('/analytics/sales/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`📊 Fetching aggregated sales for ${businessDate}...`);
+    
+    const result = await toastPOS.getAggregatedSales(businessDate);
+    
+    if (result.success) {
+      console.log(`✅ Aggregated sales data retrieved: ${JSON.stringify(result.data).length} chars`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch aggregated sales:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Analytics sales error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/analytics/checks/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`📊 Fetching check reporting for ${businessDate}...`);
+    
+    const result = await toastPOS.getCheckReporting(businessDate);
+    
+    if (result.success) {
+      console.log(`✅ Check reporting data retrieved`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch check reporting:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Analytics checks error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/analytics/labor/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`📊 Fetching labor reporting for ${businessDate}...`);
+    
+    const result = await toastPOS.getLaborReporting(businessDate);
+    
+    if (result.success) {
+      console.log(`✅ Labor reporting data retrieved`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch labor reporting:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Analytics labor error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/analytics/menu/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`📊 Fetching menu analytics for ${businessDate}...`);
+    
+    const result = await toastPOS.getMenuAnalytics(businessDate);
+    
+    if (result.success) {
+      console.log(`✅ Menu analytics data retrieved`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch menu analytics:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Analytics menu error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/analytics/payouts/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`📊 Fetching payout reporting for ${businessDate}...`);
+    
+    const result = await toastPOS.getPayoutReporting(businessDate);
+    
+    if (result.success) {
+      console.log(`✅ Payout reporting data retrieved`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch payout reporting:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Analytics payouts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Labor Management API endpoints
+router.get('/labor/employees', async (req, res) => {
+  try {
+    console.log(`👥 Fetching all employees...`);
+    
+    const result = await toastPOS.getEmployees();
+    
+    if (result.success) {
+      console.log(`✅ Employees data retrieved: ${result.data?.length || 0} employees`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch employees:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Labor employees error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/labor/shifts/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`📅 Fetching shifts for ${businessDate}...`);
+    
+    const result = await toastPOS.getShifts(businessDate);
+    
+    if (result.success) {
+      console.log(`✅ Shifts data retrieved: ${result.data?.length || 0} shifts`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch shifts:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Labor shifts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/labor/timeentries/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`⏰ Fetching time entries for ${businessDate}...`);
+    
+    const result = await toastPOS.getTimeEntries(businessDate);
+    
+    if (result.success) {
+      console.log(`✅ Time entries data retrieved: ${result.data?.length || 0} entries`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch time entries:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Labor time entries error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/labor/jobs', async (req, res) => {
+  try {
+    console.log(`💼 Fetching all jobs...`);
+    
+    const result = await toastPOS.getJobs();
+    
+    if (result.success) {
+      console.log(`✅ Jobs data retrieved: ${result.data?.length || 0} jobs`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch jobs:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Labor jobs error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Configuration API endpoints
+router.get('/config/restaurant', async (req, res) => {
+  try {
+    console.log(`🏢 Fetching restaurant configuration...`);
+    
+    const result = await toastPOS.getRestaurantConfig();
+    
+    if (result.success) {
+      console.log(`✅ Restaurant config data retrieved`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch restaurant config:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Config restaurant error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/config/dining-options', async (req, res) => {
+  try {
+    console.log(`🍽️ Fetching dining options...`);
+    
+    const result = await toastPOS.getDiningOptions();
+    
+    if (result.success) {
+      console.log(`✅ Dining options data retrieved: ${result.data?.length || 0} options`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch dining options:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Config dining options error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/config/tables', async (req, res) => {
+  try {
+    console.log(`🪑 Fetching restaurant tables...`);
+    
+    const result = await toastPOS.getTables();
+    
+    if (result.success) {
+      console.log(`✅ Tables data retrieved: ${result.data?.length || 0} tables`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch tables:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Config tables error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/config/discounts', async (req, res) => {
+  try {
+    console.log(`💰 Fetching discounts...`);
+    
+    const result = await toastPOS.getDiscounts();
+    
+    if (result.success) {
+      console.log(`✅ Discounts data retrieved: ${result.data?.length || 0} discounts`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch discounts:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Config discounts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/config/service-charges', async (req, res) => {
+  try {
+    console.log(`💳 Fetching service charges...`);
+    
+    const result = await toastPOS.getServiceCharges();
+    
+    if (result.success) {
+      console.log(`✅ Service charges data retrieved: ${result.data?.length || 0} charges`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch service charges:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Config service charges error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/config/tax-rates', async (req, res) => {
+  try {
+    console.log(`🧾 Fetching tax rates...`);
+    
+    const result = await toastPOS.getTaxRates();
+    
+    if (result.success) {
+      console.log(`✅ Tax rates data retrieved: ${result.data?.length || 0} rates`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch tax rates:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Config tax rates error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Inventory/Stock API endpoints
+router.get('/inventory/stock-counts', async (req, res) => {
+  try {
+    console.log(`📦 Fetching stock counts...`);
+    
+    const result = await toastPOS.getStockCounts();
+    
+    if (result.success) {
+      console.log(`✅ Stock counts data retrieved: ${result.data?.length || 0} items`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch stock counts:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Inventory stock counts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/inventory/menu-items', async (req, res) => {
+  try {
+    console.log(`📋 Fetching menu items with stock info...`);
+    
+    const result = await toastPOS.getMenuItemsWithStock();
+    
+    if (result.success) {
+      console.log(`✅ Menu items with stock data retrieved: ${result.data?.length || 0} items`);
+      res.json(result.data);
+    } else {
+      console.error('❌ Failed to fetch menu items with stock:', result.error);
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error: any) {
+    console.error('❌ Inventory menu items error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// MEGA ENDPOINT - Comprehensive data endpoint - ALL Toast data for maximum visibility
+router.get('/comprehensive/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const businessDate = getBusinessDateFromParam(date);
+    console.log(`🎯 FETCHING ALL COMPREHENSIVE TOAST DATA FOR ${businessDate}...`);
+    
+    // Fetch all data concurrently for maximum performance
+    const [
+      orders,
+      menus,
+      restaurant,
+      salesAnalytics,
+      checkReporting,
+      laborReporting,
+      menuAnalytics,
+      payoutReporting,
+      employees,
+      shifts,
+      timeEntries,
+      jobs,
+      restaurantConfig,
+      diningOptions,
+      tables,
+      discounts,
+      serviceCharges,
+      taxRates,
+      stockCounts,
+      menuItemsStock
+    ] = await Promise.allSettled([
+      toastPOS.getOrders(businessDate, businessDate),
+      toastPOS.getMenus(),
+      toastPOS.getRestaurant(),
+      toastPOS.getAggregatedSales(businessDate),
+      toastPOS.getCheckReporting(businessDate),
+      toastPOS.getLaborReporting(businessDate),
+      toastPOS.getMenuAnalytics(businessDate),
+      toastPOS.getPayoutReporting(businessDate),
+      toastPOS.getEmployees(),
+      toastPOS.getShifts(businessDate),
+      toastPOS.getTimeEntries(businessDate),
+      toastPOS.getJobs(),
+      toastPOS.getRestaurantConfig(),
+      toastPOS.getDiningOptions(),
+      toastPOS.getTables(),
+      toastPOS.getDiscounts(),
+      toastPOS.getServiceCharges(),
+      toastPOS.getTaxRates(),
+      toastPOS.getStockCounts(),
+      toastPOS.getMenuItemsWithStock()
+    ]);
+
+    const comprehensiveData = {
+      businessDate,
+      timestamp: new Date().toISOString(),
+      orders: orders.status === 'fulfilled' && orders.value.success ? orders.value.data : null,
+      menus: menus.status === 'fulfilled' && menus.value.success ? menus.value.data : null,
+      restaurant: restaurant.status === 'fulfilled' && restaurant.value.success ? restaurant.value.data : null,
+      analytics: {
+        sales: salesAnalytics.status === 'fulfilled' && salesAnalytics.value.success ? salesAnalytics.value.data : null,
+        checks: checkReporting.status === 'fulfilled' && checkReporting.value.success ? checkReporting.value.data : null,
+        labor: laborReporting.status === 'fulfilled' && laborReporting.value.success ? laborReporting.value.data : null,
+        menu: menuAnalytics.status === 'fulfilled' && menuAnalytics.value.success ? menuAnalytics.value.data : null,
+        payouts: payoutReporting.status === 'fulfilled' && payoutReporting.value.success ? payoutReporting.value.data : null
+      },
+      labor: {
+        employees: employees.status === 'fulfilled' && employees.value.success ? employees.value.data : null,
+        shifts: shifts.status === 'fulfilled' && shifts.value.success ? shifts.value.data : null,
+        timeEntries: timeEntries.status === 'fulfilled' && timeEntries.value.success ? timeEntries.value.data : null,
+        jobs: jobs.status === 'fulfilled' && jobs.value.success ? jobs.value.data : null
+      },
+      configuration: {
+        restaurant: restaurantConfig.status === 'fulfilled' && restaurantConfig.value.success ? restaurantConfig.value.data : null,
+        diningOptions: diningOptions.status === 'fulfilled' && diningOptions.value.success ? diningOptions.value.data : null,
+        tables: tables.status === 'fulfilled' && tables.value.success ? tables.value.data : null,
+        discounts: discounts.status === 'fulfilled' && discounts.value.success ? discounts.value.data : null,
+        serviceCharges: serviceCharges.status === 'fulfilled' && serviceCharges.value.success ? serviceCharges.value.data : null,
+        taxRates: taxRates.status === 'fulfilled' && taxRates.value.success ? taxRates.value.data : null
+      },
+      inventory: {
+        stockCounts: stockCounts.status === 'fulfilled' && stockCounts.value.success ? stockCounts.value.data : null,
+        menuItemsStock: menuItemsStock.status === 'fulfilled' && menuItemsStock.value.success ? menuItemsStock.value.data : null
+      }
+    };
+
+    console.log(`🎉 COMPREHENSIVE DATA COMPILED - Orders: ${comprehensiveData.orders?.length || 0}, Employees: ${comprehensiveData.labor.employees?.length || 0}, Tables: ${comprehensiveData.configuration.tables?.length || 0}`);
+    res.json(comprehensiveData);
+    
+  } catch (error: any) {
+    console.error('❌ Comprehensive data error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router
