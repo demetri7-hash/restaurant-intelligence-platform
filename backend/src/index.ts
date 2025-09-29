@@ -335,7 +335,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(frontendBuildPath))
   
   // Handle client-side routing - serve index.html for non-API routes
-  app.get('*', (req, res, next) => {
+  app.use('*', (req, res, next) => {
     // Skip API routes
     if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
       return next()
