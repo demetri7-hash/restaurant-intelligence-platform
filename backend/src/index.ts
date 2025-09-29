@@ -6,6 +6,7 @@ import morgan from 'morgan'
 import rateLimit from 'express-rate-limit'
 import dotenv from 'dotenv'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { PrismaClient } from '@prisma/client'
 // Import Toast service for live API testing
@@ -329,7 +330,7 @@ if (process.env.NODE_ENV === 'production') {
   // Serve static files from the frontend build directory
   const frontendBuildPath = path.join(__dirname, '../../frontend/out')
   console.log('Frontend build path:', frontendBuildPath)
-  console.log('Path exists:', require('fs').existsSync(frontendBuildPath))
+  console.log('Path exists:', fs.existsSync(frontendBuildPath))
   
   app.use(express.static(frontendBuildPath))
   
