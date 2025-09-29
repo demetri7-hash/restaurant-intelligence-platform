@@ -2,28 +2,36 @@
 
 ## CORE PRINCIPLES
 
-### 1. REAL DATA ONLY - NO PLACEHOLDERS
+### 1. NEVER CUT CORNERS OR DISABLE FEATURES
+- NEVER disable, remove, or simplify features just because they're not working
+- ALWAYS fix the root cause of issues instead of working around them
+- If a technology isn't working, troubleshoot and fix it - don't replace it
+- The goal is to get EVERYTHING working, not to scale back functionality
+- Debug thoroughly and resolve all issues before moving forward
+- When encountering build errors, dependency issues, or configuration problems, FIX THEM completely
+
+### 2. REAL DATA ONLY - NO PLACEHOLDERS
 - NEVER use placeholder data, mock data, or hardcoded fallbacks
 - Always connect to real APIs, databases, and services
 - If real data is unavailable, STOP and request access/credentials
 - Test with actual production or staging environments
 - Use environment variables for sensitive data, but connect to real services
 
-### 2. LIVE DEPLOYMENT WORKFLOW
+### 3. LIVE DEPLOYMENT WORKFLOW
 - ALWAYS commit and push changes after each significant modification
 - Deploy to staging/development environment after each push
 - Wait for human feedback on live deployment before proceeding
 - Never simulate or mock deployment - always use real deployment pipeline
 - Include deployment commands in commit workflow
 
-### 3. CONTINUOUS DOCUMENTATION
+### 4. CONTINUOUS DOCUMENTATION
 - Maintain PROJECT_SUMMARY.md with current state of the project
 - Update PROCESS_LOG.md after each successful change
 - Keep TODO.md with prioritized task list
 - Reference these files before making any decisions
 - Update documentation BEFORE making changes, not after
 
-### 4. AUTONOMOUS OPERATION GUIDELINES
+### 5. AUTONOMOUS OPERATION GUIDELINES
 - Work through TODO list systematically
 - Make one change at a time, commit, deploy, document
 - Continue working until explicitly told to stop
@@ -158,6 +166,9 @@ Waiting for feedback to continue...
 - Continue without feedback after deployment
 - Use hardcoded values instead of real connections
 - Assume APIs work without testing
+- **DISABLE OR REMOVE FEATURES TO AVOID FIXING ISSUES**
+- **SIMPLIFY OR SCALE BACK FUNCTIONALITY WHEN ENCOUNTERING PROBLEMS**
+- **CUT CORNERS OR USE WORKAROUNDS INSTEAD OF PROPER FIXES**
 
 ### ALWAYS DO
 - Connect to real services
